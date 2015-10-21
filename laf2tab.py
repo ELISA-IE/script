@@ -25,4 +25,5 @@ if __name__ == '__main__':
         outdir = sys.argv[2]
         out = open(outdir, 'w')
         for i in os.listdir(indir):
-            laf2tab('%s/%s' % (indir, i), out)
+            if i.endswith('.laf.xml'):
+                laf2tab('%s/%s' % (indir, i), out)

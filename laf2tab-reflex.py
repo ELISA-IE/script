@@ -16,31 +16,19 @@ def laf2tab(xml, out):
     soup = BeautifulSoup(open(xml).read(), 'html.parser')
     docid = soup.doc['id']
     for ann in soup.find_all('annotation'):
-        # == edited by boliang == #
         try:
             ann_type = ann['type']  # LDC laf format.
         except KeyError:
-            ann_type = ann.tag  # laf format creatd by CRF tagger is a little different from LDC laf format.
+            ann_type = ann.tag  # # LDC CRF tagger format
 
         if ann_type not in ['PER', 'ORG', 'LOC']:
             continue
-        # ======================= #
-
-        # if ann['type'] not in ['PER', 'ORG', 'LOC']:
-        #     continue
 
         tab = '%s\t%s\t%s\t%s:%s-%s\t%s\t%s\t%s\t%s\n'
-        # out.write(tab % ('GOLD', ann['id'], ann.extent.string, docid,
-        #                  offsets[ann['start_token']][0],
-        #                  offsets[ann['end_token']][1],
-        #                  'NIL', ann['type'], 'NAM', '1.0'))
-
-        # == edited by boliang == #
         out.write(tab % ('GOLD', ann['id'], ann.extent.string, docid,
                          offsets[ann['start_token']][0],
                          offsets[ann['end_token']][1],
                          'NIL', ann_type, 'NAM', '1.0'))
-        # ======================= #
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:

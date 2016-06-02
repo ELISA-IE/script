@@ -19,7 +19,7 @@ def laf2tab(laf):
         beg = extent.get('start_char')
         end = extent.get('end_char')
         head = extent.text
-        tab = '%s\t%s\t%s\t%s:%s-%s\t%s\t%s\t%s\t%s\n'
+        tab = '%s\t%s\t%s\t%s:%s-%s\t%s\t%s\t%s\t%s'
         res.append(tab % ('GOLD', annid, head, docid, beg, end,
                           'NIL', anntype, 'NAM', '1.0'))
     return res

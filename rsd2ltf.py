@@ -1,10 +1,11 @@
+#encoding=utf-8
 import os
 import argparse
 import xml.dom.minidom
 import xml.etree.ElementTree as ET
 import codecs
 
-from src.utils.tokenizer import Tokenizer
+from tokenizer import Tokenizer
 
 
 def rsd2ltf(input_file, output_file):

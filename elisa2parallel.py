@@ -20,7 +20,7 @@ def elisa2parallel(xml_str):
         trg_sents.append(trg_text)
 
     assert len(src_sents) == len(trg_sents), \
-        "num of src and trg sents not match."
+        "num of lorelei and trg sents not match."
 
     return src_sents, trg_sents
 

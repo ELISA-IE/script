@@ -1,6 +1,5 @@
 import argparse
 import codecs
-import os
 import xml.etree.ElementTree as ET
 import gzip
 

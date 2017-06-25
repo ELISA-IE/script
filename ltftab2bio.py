@@ -115,22 +115,23 @@ def parse_label(tab_str):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("ltf_file")
-    parser.add_argument("tab_file")
+    parser.add_argument("ltf")
+    parser.add_argument("tab")
     parser.add_argument("bio_file")
     parser.add_argument("-d", action="store_true", default=False,
                         help="process directory")
 
     args = parser.parse_args()
 
+    num_doc_added = 0
     if args.d:
         combined_bio = []
-        for fn in os.listdir(args.ltf_file):
+        for fn in os.listdir(args.ltf):
             try:
                 if not fn.endswith(".ltf.xml"):
                     continue
-                ltf_file = os.path.join(args.ltf_file, fn)
-                tab_file = os.path.join(args.tab_file,
+                ltf_file = os.path.join(args.ltf, fn)
+                tab_file = os.path.join(args.tab,
                                         fn.replace(".ltf.xml", '.tab'))
                 if not os.path.exists(ltf_file) or not os.path.exists(tab_file):
                     continue
@@ -141,18 +142,33 @@ if __name__ == "__main__":
                 bio_str = ltftab2bio(ltf_root, tab_str)
 
                 combined_bio.append(bio_str)
+
+                num_doc_added += 1
             except AssertionError as e:
                 print(e)
 
         write2file('\n\n'.join(combined_bio), args.bio_file)
 
+        num_ltf_files = len([fn for fn in os.listdir(args.ltf)
+                             if fn.endswith('.ltf.xml')])
+        num_tab_files = len([fn for fn in os.listdir(args.tab)
+                             if fn.endswith('.tab')])
+
     else:
-        ltf_root = ET.parse(args.ltf_file)
-        tab_str = codecs.open(args.tab_file, 'r', 'utf-8').read()
+        ltf_root = ET.parse(args.ltf)
+        tab_str = codecs.open(args.tab, 'r', 'utf-8').read()
 
         bio_str = ltftab2bio(ltf_root, tab_str)
 
         write2file(bio_str, args.bio_file)
+
+        num_doc_added = 1
+        num_ltf_files = 1
+        num_tab_files = 1
+
+    print('%d ltf files parsed.' % num_ltf_files)
+    print('%d tab files parsed.' % num_tab_files)
+    print('%d documents added to bio.' % num_doc_added)
 
 
 

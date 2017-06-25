@@ -1,12 +1,11 @@
-import io
+import codecs
 import argparse
 import xml.dom.minidom
 import xml.etree.ElementTree as ET
 
 
-def bio2ltf(bio_fp, ltf_fp, laf_fp):
-    f = io.open(bio_fp, 'r', -1, 'ISO-8859-7').read()
-    bio_sents = f.split('\n\n')
+def bio2ltf(bio_str, doc_id):
+    bio_sents = bio_str.split('\n\n')
     sents = []
     tags = []
     for sent in bio_sents:
@@ -22,8 +21,6 @@ def bio2ltf(bio_fp, ltf_fp, laf_fp):
 
     doc_text = '\n'.join([' '.join(sent) for sent in sents])
 
-    doc_id = bio_fp.split('/')[-1].replace('.bio', '')
-
     # ltf xml root
     ltf_root = ET.Element('LCTL_TEXT')
     ltf_doc_element = ET.Element('DOC', {'id': doc_id})
@@ -37,7 +34,7 @@ def bio2ltf(bio_fp, ltf_fp, laf_fp):
     laf_root.append(laf_doc_element)
 
     prev_seg_end = -2
-    for i in xrange(len(sents)):
+    for i in range(len(sents)):
         # ======== generate ltf file
         seg_text = ' '.join(sents[i])
         seg_start_char = prev_seg_end + 2  # '\n' between segs
@@ -54,7 +51,7 @@ def bio2ltf(bio_fp, ltf_fp, laf_fp):
         seg_element.append(original_text_element)
 
         pre_tok_end = seg_start_char - 2
-        for j in xrange(len(sents[i])):
+        for j in range(len(sents[i])):
             token_id = '%s-%s' % (seg_id, str(j))
             tok_text = sents[i][j]
             tok_start_char = pre_tok_end + 2
@@ -75,7 +72,7 @@ def bio2ltf(bio_fp, ltf_fp, laf_fp):
         # get annotations
         annotations = []
         tmp_ann_start = -1
-        for j in xrange(len(sents[i])):
+        for j in range(len(sents[i])):
             if tags[i][j].startswith('B'):
                 if tmp_ann_start != -1:
                     tmp_ann_end = j - 1
@@ -118,26 +115,18 @@ def bio2ltf(bio_fp, ltf_fp, laf_fp):
             annotation_element.append(extent_element)
             laf_doc_element.append(annotation_element)
 
-    # # write ltf to file
-    # ltf_root = ET.ElementTree(ltf_root)
-    #
-    # ltf_root.write(ltf_fp)
-    #
-    # # pretty print xml
-    # f_xml = xml.dom.minidom.parse(ltf_fp)  # or xml.dom.minidom.parseString(xml_string)
-    # pretty_xml_as_string = f_xml.toprettyxml()
-    # f = io.open(ltf_fp, 'w', -1, 'utf-8')
-    # f.write(pretty_xml_as_string)
-    # f.close()
+    return ltf_root, laf_root
 
+
+def write2file(ltf_root, laf_root, ltf_fp, laf_fp):
     ltf_xml_str = ET.tostring(ltf_root, 'utf-8')
     ltf_xml = xml.dom.minidom.parseString(ltf_xml_str)
-    f = io.open(ltf_fp, 'w', -1, 'utf-8')
+    f = codecs.open(ltf_fp, 'w', 'utf-8')
     f.write(ltf_xml.toprettyxml(indent='\t'))
     f.close()
 
     laf_xml = xml.dom.minidom.parseString(ET.tostring(laf_root, 'utf-8'))
-    f = io.open(laf_fp, 'w', -1, 'utf-8')
+    f = codecs.open(laf_fp, 'w', 'utf-8')
     f.write(laf_xml.toprettyxml(indent='\t'))
     f.close()
 
@@ -153,4 +142,10 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    bio2ltf(args.bio_fp, args.ltf_fp, args.laf_fp)
+    bio_str = codecs.open(args.bio_fp, 'r', 'utf-8').read()
+
+    doc_id = args.bio_fp.split('/')[-1].replace('.bio', '')
+
+    ltf_root, laf_root = bio2ltf(bio_str, doc_id)
+
+    write2file(ltf_root, laf_root, args.ltf_fp, args.laf_fp)

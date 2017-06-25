@@ -2,12 +2,13 @@ import argparse
 import codecs
 
 
-def bio2tab(bio_file, tab_file):
-    bio_sents = codecs.open(bio_file, 'r', 'utf-8').read().split('\n\n')
+def bio2tab(bio_str):
+    bio_sents = bio_str.split('\n\n')
 
     tab_result = []
     current_doc_id = ''
     label_index = 0
+    b_tag_count = 0
     for sent in bio_sents:
         sent_mentions = []
         tokens = sent.splitlines()
@@ -28,6 +29,7 @@ def bio2tab(bio_file, tab_file):
                     sent_mentions.append(current_mention)
                     current_mention = []
             elif pred_tag == 'B':
+                b_tag_count += 1
                 if current_mention:
                     sent_mentions.append(current_mention)
                 current_mention = [(text, doc_id, start_char,
@@ -76,8 +78,17 @@ def bio2tab(bio_file, tab_file):
 
             label_index += 1
 
+    assert b_tag_count == len(tab_result), \
+        'number of B tag in bio and tab entries does not match'
+
+    tab_str = '\n'.join(tab_result)+'\n'
+
+    return tab_str
+
+
+def write2file(tab_str, tab_file):
     with codecs.open(tab_file, 'w', 'utf-8') as f:
-        f.write('\n'.join(tab_result)+'\n')
+        f.write(tab_str)
 
 
 if __name__ == "__main__":
@@ -90,6 +101,11 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    bio2tab(args.bio_file, args.tab_file)
+    bio_str = codecs.open(args.bio_file, 'r', 'utf-8').read()
+
+    tab_str = bio2tab(bio_str)
+
+    write2file(tab_str, args.tab_file)
+
 
 

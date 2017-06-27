@@ -36,8 +36,6 @@ if __name__ == '__main__':
 
     paths = sys.argv[1:-1]
     outpath = sys.argv[-1]
-    print(paths)
-    print(outpath)
     logger = logging.getLogger()
     logging.basicConfig(format='%(asctime)s: %(levelname)s: %(message)s')
     logging.root.setLevel(level=logging.INFO)

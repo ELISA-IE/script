@@ -1,8 +1,8 @@
 # this script:
 # 1. evaluates entity discovery and linking results. It takes tab or bio as
-# input format.
+# input.
 # 2. prints stats of the input and reference files.
-# 3. does error analysis based on 5 error types.
+# 3. runs error analysis of 5 error types.
 
 import argparse
 import codecs
@@ -53,13 +53,15 @@ def evaluate(input_tab_str, ref_tab_str):
             scores[etype] = (p, r, f)
 
     # compute overall p, r, f scores
-    p_overall = float(sum(correct_input_counts.values())) / sum(input_counts.values())
-    r_overall = float(sum(correct_input_counts.values())) / sum(ref_counts.values())
-    if p_overall or r_overall:
-        f_overall = 2 * p_overall * r_overall / (p_overall + r_overall)
+    if not input_counts or not sum(correct_input_counts.values()):
+        scores['overall'] = [0, 0, 0]
     else:
-        f_overall = 0
-    scores['overall'] = [p_overall, r_overall, f_overall]
+        p_overall = \
+            float(sum(correct_input_counts.values())) / sum(input_counts.values())
+        r_overall = \
+            float(sum(correct_input_counts.values())) / sum(ref_counts.values())
+        f_overall = 2 * p_overall * r_overall / (p_overall + r_overall)
+        scores['overall'] = [p_overall, r_overall, f_overall]
 
     return scores
 
@@ -75,6 +77,46 @@ def count_by_etype(tab_dict):
             counts[entity_type] = 1
 
     return counts
+
+
+def split_data(input_bio_str, input_tab_str, ref_bio_str, ref_tab_str):
+    input_bio = split_bio_by_doc(input_bio_str)
+    ref_bio = split_bio_by_doc(ref_bio_str)
+    input_tab = split_tab_by_doc(input_tab_str)
+    ref_tab = split_tab_by_doc(ref_tab_str)
+
+    return input_bio, ref_bio, input_tab, ref_tab
+
+
+def split_bio_by_doc(bio_str):
+    bio = {}
+    for sent in bio_str.split('\n\n'):
+        if not sent.strip():
+            continue
+        doc_id = sent.splitlines()[0].split()[1].split(':')[0]
+        try:
+            bio[doc_id].append(sent)
+        except KeyError:
+            bio[doc_id] = [sent]
+
+    for doc_id, sents in bio.items():
+        bio[doc_id] = '\n\n'.join(sents)
+
+    return bio
+
+
+def split_tab_by_doc(tab_str):
+    tab = {}
+    for line in tab_str.splitlines():
+        doc_id = line.split('\t')[3].split(':')[0]
+        try:
+            tab[doc_id].append(line)
+        except KeyError:
+            tab[doc_id] = [line]
+
+    for doc_id, lines in tab.items():
+        tab[doc_id] = '\n'.join(lines)
+    return tab
 
 
 #
@@ -154,6 +196,9 @@ def convert_tab_dict(tab_dict):
     return tab_dict_by_char
 
 
+#
+# utils
+#
 # parse tab str into a tab dict
 def parse_tab_str(tab_str):
     tab_dict = {}
@@ -223,10 +268,10 @@ def print_stats(stats):
     if num_docs and num_sents and num_tokens:
         print('  %d documents; %d sentences; %d tokens.' %
               (num_docs, num_sents, num_tokens))
-    print('  mentions: ')
+    print('  ', end='')
     for entity_type, count in entry_counts_by_type.items():
-        print('  %s: %d' % (entity_type, count))
-    print('  overall mentions: %d' % sum(entry_counts_by_type.values()))
+        print('%s %d' % (entity_type, count), end='; ')
+    print('overall mentions %d' % sum(entry_counts_by_type.values()))
 
 
 def print_errors(errors):
@@ -235,6 +280,16 @@ def print_errors(errors):
     for error_type, e in errors.items():
         print(' %s: %d' % (error_type, len(e)))
 
+
+def print_scores(scores):
+    print('=> performance')
+    print("  {:<14}{:<14}{:<14}{:<14}".format(
+        'entity_type', 'precision', 'recall', 'f1'
+    ))
+    for etype, s in scores.items():
+        print("  {:<14}{:<14.4f}{:<14.4f}{:<14.4f}".format(
+            etype, s[0], s[1], s[2]
+        ))
 
 #
 # main function
@@ -245,6 +300,8 @@ if __name__ == "__main__":
     parser.add_argument('--input_tab')
     parser.add_argument('--ref_bio')
     parser.add_argument('--ref_tab')
+    parser.add_argument('-d', action="store_true", default=False,
+                        help="evaluate by document level")
 
     args = parser.parse_args()
 
@@ -265,26 +322,64 @@ if __name__ == "__main__":
         ref_bio_str = ''
         ref_tab_str = codecs.open(args.ref_tab, 'r', 'utf-8').read()
 
-    # ref stats
-    input_stats = stats(input_bio_str, input_tab_str)
-    ref_stats = stats(ref_bio_str, ref_tab_str)
-    print_stats(input_stats)
-    print_stats(ref_stats)
+    if args.d:
+        input_bio, ref_bio, input_tab, ref_tab = split_data(
+            input_bio_str, input_tab_str, ref_bio_str, ref_tab_str
+        )
+        overall_input_stats = {}
+        overall_ref_stats = {}
+        overall_scores = {}
+        overall_errors = {}
+        for doc_id in ref_bio:
+            if doc_id not in input_tab:
+                input_tab[doc_id] = ''
+            if doc_id not in input_bio:
+                input_bio[doc_id] = ''
 
-    # evaluate tab
-    scores = evaluate(input_tab_str, ref_tab_str)
-    print('=> performance')
-    print("  {:<14}{:<14}{:<14}{:<14}".format(
-        'entity_type', 'precision', 'recall', 'f1'
-    ))
-    for etype, s in scores.items():
-        print("  {:<14}{:<14.4f}{:<14.4f}{:<14.4f}".format(
-            etype, s[0], s[1], s[2]
-        ))
+            # ref stats
+            input_stats = stats(input_bio[doc_id], input_tab[doc_id])
+            ref_stats = stats(ref_bio[doc_id], ref_tab[doc_id])
+            overall_input_stats[doc_id] = input_stats
+            overall_ref_stats[doc_id] = ref_stats
 
-    # error analysis
-    errors = error_analysis(input_tab_str, ref_tab_str)
-    print_errors(errors)
+            # evaluate tab
+            scores = evaluate(input_tab[doc_id], ref_tab[doc_id])
+
+            # error analysis
+            errors = error_analysis(input_tab[doc_id], ref_tab[doc_id])
+
+            overall_scores[doc_id] = scores
+            overall_errors[doc_id] = errors
+
+        # sort overall score by f1
+        sorted_overall_scores = sorted(overall_scores.items(),
+                                       key=lambda x: x[1]['overall'][2],
+                                       reverse=True)
+
+        # print results
+        for doc_id, _ in sorted_overall_scores:
+            print('########### %s ###########' % doc_id)
+            print_stats(overall_input_stats[doc_id])
+            print_stats(overall_ref_stats[doc_id])
+            print_scores(overall_scores[doc_id])
+            print_errors(overall_errors[doc_id])
+            print('\n')
+
+    else:
+        # ref stats
+        input_stats = stats(input_bio_str, input_tab_str)
+        ref_stats = stats(ref_bio_str, ref_tab_str)
+        print_stats(input_stats)
+        print_stats(ref_stats)
+
+        # evaluate tab
+        scores = evaluate(input_tab_str, ref_tab_str)
+        print_scores(scores)
+
+        # error analysis
+        errors = error_analysis(input_tab_str, ref_tab_str)
+        print_errors(errors)
+
 
 
 

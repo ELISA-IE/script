@@ -247,31 +247,37 @@ def stats(bio_str, tab_str):
     # tab stats
     sys_name = ''
     tab = parse_tab_str(tab_str)
-    entry_counts_by_type = {}
+    num_entries_by_type = {}
     for offset, entry in tab.items():
         entity_type = entry[2]
         sys_name = entry[0]
         try:
-            entry_counts_by_type[entity_type] += 1
+            num_entries_by_type[entity_type] += 1
         except KeyError:
-            entry_counts_by_type[entity_type] = 1
+            num_entries_by_type[entity_type] = 1
 
-    return sys_name, num_docs, num_sents, num_tokens, entry_counts_by_type
+    res = {}
+    res['sys_name'] = sys_name
+    res['num_docs'] = num_docs
+    res['num_sents'] = num_sents
+    res['num_tokens'] = num_tokens
+    res['num_entries_by_type'] = num_entries_by_type
+
+    return res
 
 
 #
 # print results
 #
 def print_stats(stats):
-    sys_name, num_docs, num_sents, num_tokens, entry_counts_by_type = stats
-    print('=> %s stats' % sys_name)
-    if num_docs and num_sents and num_tokens:
+    print('=> %s stats' % stats['sys_name'])
+    if stats['num_docs'] and stats['num_sents'] and stats['num_tokens']:
         print('  %d documents; %d sentences; %d tokens.' %
-              (num_docs, num_sents, num_tokens))
+              (stats['num_docs'], stats['num_sents'], stats['num_tokens']))
     print('  ', end='')
-    for entity_type, count in entry_counts_by_type.items():
+    for entity_type, count in stats['num_entries_by_type'].items():
         print('%s %d' % (entity_type, count), end='; ')
-    print('overall mentions %d' % sum(entry_counts_by_type.values()))
+    print('overall mentions %d' % sum(stats['num_entries_by_type'].values()))
 
 
 def print_errors(errors):

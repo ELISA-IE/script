@@ -34,7 +34,7 @@ def bio2tab(bio_str):
                     sent_mentions.append(current_mention)
                 current_mention = [(text, doc_id, start_char,
                                     end_char, pred_type)]
-            elif pred_tag == 'I':
+            elif pred_tag == 'I' and current_mention:
                 current_mention.append((text, doc_id, start_char,
                                         end_char, pred_type))
             if i == len(tokens)-1 and current_mention:

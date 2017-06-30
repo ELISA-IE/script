@@ -8,7 +8,7 @@ import codecs
 from tokenizer import Tokenizer
 
 
-def rsd2ltf(input_file, output_file):
+def rsd2ltf(input_file, output_file, seg_option, tok_option):
     rsd_files = []
     output_files = []
     if os.path.isdir(input_file):
@@ -24,7 +24,7 @@ def rsd2ltf(input_file, output_file):
         rsd_files = [input_file]
         output_files = [output_file]
 
-    tokenizer = Tokenizer('linebreak', 'unitok')
+    tokenizer = Tokenizer(seg_option, tok_option)
     for k, rsd_f in enumerate(rsd_files):
         try:
             f = codecs.open(rsd_f, 'r', 'utf-8').read()
@@ -126,10 +126,17 @@ if __name__ == "__main__":
                         help='input rsd file path or directory.')
     parser.add_argument('ltf_output', type=str,
                         help='output ltf file path or directory.')
+    t = Tokenizer()
+    parser.add_argument('--seg_option', default='linebreak',
+                        help="segmentation options: %s (default is linebreak)" %
+                             ', '.join(t.segmenters.keys()))
+    parser.add_argument('--tok_option', default='unitok',
+                        help="tokenization options: %s (default is unitok)" %
+                             ', '.join(t.tokenizers.keys()))
 
     args = parser.parse_args()
 
     input_rsd = args.rsd_input
     output_ltf = args.ltf_output
 
-    rsd2ltf(input_rsd, output_ltf)
+    rsd2ltf(input_rsd, output_ltf, args.seg_option, args.tok_option)

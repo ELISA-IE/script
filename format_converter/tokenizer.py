@@ -6,7 +6,7 @@ import unicodedata as ud
 
 
 class Tokenizer(object):
-    def __init__(self, seg_option, tok_option):
+    def __init__(self, seg_option="linebreak", tok_option="unitok"):
         self.segmenters = {'linebreak': self.seg_linebreak,
                            'nltk': self.seg_nltk,
                            'cmn': self.seg_cmn

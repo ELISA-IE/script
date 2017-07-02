@@ -68,6 +68,9 @@ def load_ltf(ltf_root):
     for seg in ltf_root.find('DOC').find('TEXT').findall('SEG'):
         sent_tokens = []
         seg_text = seg.find('ORIGINAL_TEXT').text
+        # ignore empty sentence
+        if not seg_text:
+            continue
         seg_start = int(seg.get('start_char'))
         seg_end = int(seg.get('end_char'))
         seg_id = seg.get('id')

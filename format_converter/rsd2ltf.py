@@ -43,6 +43,7 @@ def rsd2ltf(input_file, output_file, seg_option, tok_option):
                     assert f[sent_start:sent_end+1] == s, \
                         "sentence offset not match %s-%d" % (rsd_f, i)
                     sent_offset.append((sent_start, sent_end))
+                    indexer = sent_end + 1
 
             assert len(sent_offset) == len(sents), \
                 "sentence segmentation offset error in: %s" % rsd_f

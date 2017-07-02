@@ -4,45 +4,33 @@ import argparse
 import xml.etree.ElementTree as ET
 
 
-def ltf2bio(ltf_dp, output_fp, ltf_filelist_fp=''):
-    if ltf_filelist_fp:
-        ltf_filelist = open(ltf_filelist_fp).read().splitlines()
-        doc_ids = [item.replace('.ltf.xml', '') for item in ltf_filelist]
-    else:
-        doc_ids = [item.replace('.ltf.xml', '') for item in os.listdir(ltf_dp) if 'ltf' in item]
+def ltf2bio(ltf_str):
+    doc_tokens = load_ltf(ltf_str)
 
-    res = []
-    for d_id in doc_ids:
-        ltf_fp = os.path.join(ltf_dp, d_id+'.ltf.xml')
-        assert os.path.exists(ltf_fp)
+    bio = []
+    for sent in doc_tokens:
+        sent_res = []
+        for token in sent:
+            t_text = token[0]
+            if t_text is None:
+                t_text = ''
+            t_doc_id = token[1]
+            t_start_char = int(token[2])
+            t_end_char = int(token[3])
 
-        doc_tokens = load_ltf(ltf_fp)
+            # get token bio tag
+            sent_res.append(' '.join([t_text,
+                                      '%s:%s-%s' % (t_doc_id,
+                                                    t_start_char,
+                                                    t_end_char)]))
+        bio.append('\n'.join(sent_res))
 
-        for sent_tokens in doc_tokens:
-            sent_res = []
-            for token in sent_tokens:
-                t_text = token[0]
-                if t_text is None:
-                    t_text = ''
-                t_doc_id = token[1]
-                t_start_char = int(token[2])
-                t_end_char = int(token[3])
-
-                # get token bio tag
-                sent_res.append(' '.join([t_text,
-                                          '%s:%s-%s' % (t_doc_id,
-                                                        t_start_char,
-                                                        t_end_char)]))
-            res.append('\n'.join(sent_res))
-
-    # output bio results
-    with codecs.open(output_fp, 'w', 'utf-8') as f:
-        f.write(u'\n\n'.join(res)+'\n')
+    return '\n\n'.join(bio)
 
 
-def load_ltf(ltf_fp):
+def load_ltf(ltf_str):
     doc_tokens = []
-    root = ET.parse(ltf_fp)
+    root = ET.fromstring(ltf_str)
     doc_id = root.find('DOC').get('id')
     for seg in root.find('DOC').find('TEXT').findall('SEG'):
         sent_tokens = []
@@ -56,6 +44,11 @@ def load_ltf(ltf_fp):
     return doc_tokens
 
 
+def write2file(bio_str, out_file):
+    with codecs.open(out_file, 'w', 'utf-8') as f:
+        f.write(bio_str)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('ltf_dp', type=str,
@@ -67,4 +60,22 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    ltf2bio(args.ltf_dp, args.output_fp, ltf_filelist_fp=args.ltf_filelist_fp)
+    if args.ltf_filelist_fp:
+        ltf_filelist = open(args.ltf_filelist_fp).read().splitlines()
+        doc_ids = [item.replace('.ltf.xml', '')
+                   for item in ltf_filelist]
+    else:
+        doc_ids = [item.replace('.ltf.xml', '')
+                   for item in os.listdir(args.ltf_dp) if 'ltf' in item]
+
+    res = []
+    for d_id in doc_ids:
+        ltf_fp = os.path.join(args.ltf_dp, d_id+'.ltf.xml')
+        assert os.path.exists(ltf_fp)
+
+        ltf_str = codecs.open(ltf_fp, 'r', 'utf-8').read()
+        res.append(ltf2bio(ltf_str))
+
+    write2file('\n\n'.join(res), args.output_fp)
+
+    print('%d files converted.' % len(res))

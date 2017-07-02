@@ -9,7 +9,9 @@ class Tokenizer(object):
     def __init__(self, seg_option="linebreak", tok_option="unitok"):
         self.segmenters = {'linebreak': self.seg_linebreak,
                            'nltk': self.seg_nltk,
-                           'cmn': self.seg_cmn
+                           'cmn': self.seg_cmn,
+                           'edl_spanish': self.seg_edl_spanish,
+                           'edl_cmn': self.seg_edl_cmn,
                            }
         self.tokenizers = {'unitok': self.tok_unitok,
                            'regexp': self.tok_regexp,
@@ -23,6 +25,10 @@ class Tokenizer(object):
 
         self.seg_option = seg_option
         self.tok_option = tok_option
+
+        # initialize jieba cn tok
+        if tok_option == 'jieba':
+            jieba.initialize()
 
     def run_segmenter(self, plain_text):
         # right strip plain text
@@ -82,6 +88,33 @@ class Tokenizer(object):
                 current_sent += char
 
         return [item.strip() for item in res]
+
+    def seg_edl(self, plain_text, seg_option):
+        # replace \n with ' ' because of the fix line length of edl data
+        # plain_text = plain_text.replace('\n', ' ')
+
+        # do sentence segmentation
+        if seg_option == 'edl_spanish':
+            # use nltk sent tokenization for spanish
+            tmp_seg = nltk.sent_tokenize(plain_text)
+        if seg_option == 'edl_cmn':
+            # use naive sent tokenization for chinese
+            tmp_seg = self.seg_cmn(plain_text)
+
+        # recover \n after xml tag
+        recovered_tmp_seg = []
+        for sent in tmp_seg:
+            sent = sent.replace('> ', '>\n').replace(' <', '\n<')
+            sent = sent.split('\n')
+            recovered_tmp_seg += [item.strip() for item in sent]
+
+        return recovered_tmp_seg
+
+    def seg_edl_spanish(self, plain_text):
+        return self.seg_edl(plain_text, 'edl_spanish')
+
+    def seg_edl_cmn(self, plain_text):
+        return self.seg_edl(plain_text, 'edl_cmn')
 
     #
     # tokenizers

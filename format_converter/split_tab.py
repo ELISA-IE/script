@@ -46,6 +46,11 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    tabs = split_tab(args.input_tab_fp)
+    tabs = split_tab(open(args.input_tab_fp).read())
+
+    try:
+        os.mkdir(args.output_dir)
+    except FileExistsError:
+        pass
 
     write2file(tabs, args.output_dir)

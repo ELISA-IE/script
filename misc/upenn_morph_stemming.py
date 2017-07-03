@@ -8,24 +8,23 @@ def read_upenn_morph(pdata):
     with open(pdata, 'r') as f:
         for line in f:
             tmp = line.rstrip('\n').split('\t')
-
-            if not tmp[2]:
-                continue
-
             word = tmp[0]
             morphemes = tmp[1]
+            if not tmp[2]:
+                continue
 
             try:
                 assert word not in upenn_morph
             except AssertionError:
                 pass
-                # print("duplicate: %s" % word)
+                # logger.info("duplicate: %s" % word)
 
             m = re.search('(\S+) \$ \$', tmp[2])
             if m:
                 root = m.group(1)
             else:
-                print(repr(line))
+                logger.info('unexpected error: %s'  % str(sys.exc_info()))
+                logger.info(repr(line))
                 exit()
 
             upenn_morph[word] = root
@@ -42,7 +41,6 @@ def process(pum, pbio, outpath):
         'match': 0,
         'stem': 0
     }
-
     out = open(outpath, 'w')
     with open(pbio, 'r') as f:
         for line in f:

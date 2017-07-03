@@ -16,6 +16,7 @@ def ltftab2bio(ltf_root, tab_str):
             assert doc_text[start_char:end_char+1] == mention, \
                 "mention offset error in %s %s" % (doc_id, l)
         except AssertionError as e:
+            counter['mention_offset_error'] += 1
             print(e)
 
     # create annotation mapping table
@@ -28,20 +29,59 @@ def ltftab2bio(ltf_root, tab_str):
 
     for i, sent_tokens in enumerate(doc_tokens):
         sent_res = []
+
+        retok_sent_tokens = []
+
+        # re-tokenize token based label
         for token in sent_tokens:
             t_text = token[0]
             t_start_char = int(token[1])
             t_end_char = int(token[2])
 
+            head, tail = [], []
+            body_start, body_end = t_start_char, t_end_char
+            for t_char in range(t_start_char, t_end_char+1):
+                if t_char in label_offset_mapping:
+                    if t_char == label_offset_mapping[t_char][1] and \
+                                    t_char != t_start_char:
+                        head = [(t_text[:t_char-t_start_char],
+                                 t_start_char, t_char-1)]
+                        assert doc_text[head[0][1]:head[0][2]+1] == head[0][0],\
+                            'head error in token re-tokneize'
+                        body_start = t_char
+                    if t_char == label_offset_mapping[t_char][2] and \
+                                    t_char != t_end_char:
+                        tail = [(t_text[t_char-t_start_char+1:],
+                                 t_char+1, t_end_char)]
+                        assert doc_text[tail[0][1]:tail[0][2]+1] == tail[0][0],\
+                            'tail error in token re-tokneize'
+                        body_end = t_char
+            body = [(t_text[body_start-t_start_char:body_end-t_start_char+1],
+                     body_start, body_end)]
+
+            assert doc_text[body[0][1]:body[0][2] + 1] == body[0][0],\
+                'body error in token re-tokneize'
+
+            if head or tail:
+                counter['num_retok_token'] += 1
+
+            retok_sent_tokens += head + body + tail
+
+        # add label to bio
+        for token in retok_sent_tokens:
+            t_text = token[0]
+            t_start_char = int(token[1])
+            t_end_char = int(token[2])
+
             # get token bio tag
-            tag = ''
             if t_start_char in label_offset_mapping.keys():
                 entity_type = label_offset_mapping[t_start_char][3]
                 if t_start_char == label_offset_mapping[t_start_char][1]:
                     tag = '%s-%s' % ('B', entity_type)
+                    counter['num_b_tag'] += 1
                 else:
                     tag = '%s-%s' % ('I', entity_type)
-            if not tag:
+            else:
                 tag = 'O'
 
             sent_res.append(' '.join([t_text,
@@ -110,6 +150,9 @@ def parse_label(tab_str):
 
             labels.append((mention, int(start_char),
                            int(end_char), mention_type))
+
+            counter['num_labels'] += 1
+
         except:
             print("parse label error in %s" % line)
 
@@ -125,6 +168,12 @@ if __name__ == "__main__":
                         help="process directory")
 
     args = parser.parse_args()
+
+    counter = dict()
+    counter['num_labels'] = 0
+    counter['num_b_tag'] = 0
+    counter['num_retok_token'] = 0
+    counter['mention_offset_error'] = 0
 
     num_doc_added = 0
     if args.d:
@@ -172,6 +221,11 @@ if __name__ == "__main__":
     print('%d ltf files parsed.' % num_ltf_files)
     print('%d tab files parsed.' % num_tab_files)
     print('%d documents added to bio.' % num_doc_added)
+    print('%d names parsed in tab file.' % counter['num_labels'])
+    print('%d B tags added to bio.' % counter['num_b_tag'])
+    print('%d tokens re-tokenized.' % counter['num_retok_token'])
+    print('%d mention offset errors.' % counter['mention_offset_error'])
+
 
 
 

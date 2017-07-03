@@ -27,6 +27,7 @@ def ltftab2bio(ltf_root, tab_str):
         for i in range(start_char, end_char + 1):
             label_offset_mapping[i] = l
 
+    b_tags = set()
     for i, sent_tokens in enumerate(doc_tokens):
         sent_res = []
 
@@ -38,34 +39,43 @@ def ltftab2bio(ltf_root, tab_str):
             t_start_char = int(token[1])
             t_end_char = int(token[2])
 
-            head, tail = [], []
-            body_start, body_end = t_start_char, t_end_char
-            for t_char in range(t_start_char, t_end_char+1):
+            char_labels = []
+            for t_char in range(t_start_char, t_end_char + 1):
+                if t_char not in label_offset_mapping:
+                    char_labels.append('O')
                 if t_char in label_offset_mapping:
-                    if t_char == label_offset_mapping[t_char][1] and \
-                                    t_char != t_start_char:
-                        head = [(t_text[:t_char-t_start_char],
-                                 t_start_char, t_char-1)]
-                        assert doc_text[head[0][1]:head[0][2]+1] == head[0][0],\
-                            'head error in token re-tokneize'
-                        body_start = t_char
-                    if t_char == label_offset_mapping[t_char][2] and \
-                                    t_char != t_end_char:
-                        tail = [(t_text[t_char-t_start_char+1:],
-                                 t_char+1, t_end_char)]
-                        assert doc_text[tail[0][1]:tail[0][2]+1] == tail[0][0],\
-                            'tail error in token re-tokneize'
-                        body_end = t_char
-            body = [(t_text[body_start-t_start_char:body_end-t_start_char+1],
-                     body_start, body_end)]
+                    char_labels.append(label_offset_mapping[t_char])
 
-            assert doc_text[body[0][1]:body[0][2] + 1] == body[0][0],\
-                'body error in token re-tokneize'
+            char_index = []
+            current_char_index = []
+            current_label = None
+            for j, char_label in enumerate(char_labels):
+                if char_label != current_label:
+                    if current_char_index:
+                        char_index.append(current_char_index)
+                    current_char_index = [j]
+                    current_label = char_label
+                elif char_label == current_label:
+                    current_char_index.append(j)
+                if j == len(char_labels)-1:
+                    char_index.append(current_char_index)
 
-            if head or tail:
+            retok_tokens = []
+            for index in char_index:
+                start = t_start_char + index[0]
+                end = t_start_char + index[-1]
+                text = t_text[start-t_start_char:end-t_start_char+1]
+                assert doc_text[start:end+1] == text, 'retok token offset error'
+                retok_tokens.append((text, start, end))
+
+            assert ''.join([item[0] for item in retok_tokens]) == t_text, \
+                'join of retok tokens not match original text in %s-%d' % \
+                (doc_id, i)
+
+            retok_sent_tokens += retok_tokens
+
+            if len(char_index) > 1:
                 counter['num_retok_token'] += 1
-
-            retok_sent_tokens += head + body + tail
 
         # add label to bio
         for token in retok_sent_tokens:
@@ -78,7 +88,7 @@ def ltftab2bio(ltf_root, tab_str):
                 entity_type = label_offset_mapping[t_start_char][3]
                 if t_start_char == label_offset_mapping[t_start_char][1]:
                     tag = '%s-%s' % ('B', entity_type)
-                    counter['num_b_tag'] += 1
+                    b_tags.add(t_start_char)
                 else:
                     tag = '%s-%s' % ('I', entity_type)
             else:
@@ -91,6 +101,16 @@ def ltftab2bio(ltf_root, tab_str):
                                       tag]))
 
         res.append('\n'.join(sent_res))
+
+    if len(b_tags) != len(labels):
+        print('number of B tags and number of labels do not match in %s (%d/%d)'
+              % (doc_id, len(b_tags), len(labels)))
+        for l in labels:
+            start = l[1]
+            if start not in b_tags:
+                print('  %s %d-%d' % (l[0], l[1], l[2]))
+
+    counter['num_b_tag'] += len(b_tags)
 
     return '\n\n'.join(res)
 
@@ -123,6 +143,8 @@ def load_ltf(ltf_root):
         for token in seg.findall('TOKEN'):
             token_id = token.get('id')
             token_text = token.text
+            if not token_text.strip():
+                continue
             start_char = int(token.get('start_char'))
             end_char = int(token.get('end_char'))
 
@@ -137,6 +159,9 @@ def load_ltf(ltf_root):
 
 def parse_label(tab_str):
     labels = []
+    num_overlap_label = 0
+    doc_id = ''
+    char_offset = set()
     for line in tab_str.splitlines():
         try:
             line = line.strip()
@@ -146,15 +171,40 @@ def parse_label(tab_str):
             mention = line[2]
             doc_id, offset = line[3].split(':')
             start_char, end_char = offset.split("-")
+            start_char, end_char = int(start_char), int(end_char)
             mention_type = line[5]
 
-            labels.append((mention, int(start_char),
-                           int(end_char), mention_type))
+            # check overlap labels
+            overlapped_chars = char_offset.intersection(
+                set(range(start_char, end_char + 1))
+            )
+            if overlapped_chars:
+                num_overlap_label += 1
+                for i, l in enumerate(labels):
+                    if not set(range(l[1], l[2]+1)).intersection(overlapped_chars):
+                        continue
+                    if l[2]-l[1]+1 < end_char-start_char+1:
+                        tmp = (mention, start_char, end_char, mention_type)
+                        labels[i] = tmp
+                        char_offset = char_offset.union(set(range(start_char,
+                                                                  end_char+1)))
+                continue
+            else:
+                char_offset = char_offset.union(set(range(start_char,
+                                                          end_char+1)))
+
+            labels.append((mention, start_char, end_char, mention_type))
 
             counter['num_labels'] += 1
+        except Exception as e:
+            print(e, "; parse label error in %s" % line)
 
-        except:
-            print("parse label error in %s" % line)
+    if num_overlap_label:
+        print('%d overlapped labels found in %s' % (num_overlap_label, doc_id))
+
+    labels = set(labels)
+    assert len(set([l[1] for l in labels])) == len(labels), \
+        'overlap name found in parsed names.'
 
     return labels
 
@@ -197,7 +247,7 @@ if __name__ == "__main__":
 
                 num_doc_added += 1
             except AssertionError as e:
-                print(e)
+                print('ERROR:', e)
 
         write2file('\n\n'.join(combined_bio), args.bio_file)
 

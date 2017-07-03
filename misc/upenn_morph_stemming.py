@@ -8,6 +8,10 @@ def read_upenn_morph(pdata):
     with open(pdata, 'r') as f:
         for line in f:
             tmp = line.rstrip('\n').split('\t')
+
+            if not tmp[2]:
+                continue
+
             word = tmp[0]
             morphemes = tmp[1]
 
@@ -21,7 +25,7 @@ def read_upenn_morph(pdata):
             if m:
                 root = m.group(1)
             else:
-                print(repr(tmp[2]))
+                print(repr(line))
                 exit()
 
             upenn_morph[word] = root

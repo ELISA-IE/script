@@ -53,7 +53,8 @@ def rsd2ltf(input_file, output_file, seg_option, tok_option):
                 indexer = 0
                 t_offset = []
                 for j, t in enumerate(tok):
-                    while not sent_text[indexer:].startswith(t) and indexer < len(sent_text):
+                    while not sent_text[indexer:].startswith(t) and \
+                                    indexer < len(sent_text):
                         indexer += 1
                     if indexer < len(sent_text):
                         t_start = indexer
@@ -61,6 +62,7 @@ def rsd2ltf(input_file, output_file, seg_option, tok_option):
                         assert sent_text[t_start:t_end+1] == t, \
                             "token offset not match %s-%d-%d" % (rsd_f, i, j)
                         t_offset.append((t_start, t_end))
+                        indexer = t_end + 1
                 token_offsets.append(t_offset)
 
                 assert len(t_offset) == len(tok), \
@@ -99,9 +101,10 @@ def rsd2ltf(input_file, output_file, seg_option, tok_option):
 
                     assert f[tok_start_char:tok_end_char+1] == tok_text
 
-                    token_element = ET.Element('TOKEN', {'id': token_id,
-                                                         'start_char': str(tok_start_char),
-                                                         'end_char': str(tok_end_char)})
+                    token_element = ET.Element('TOKEN',
+                                               {'id': token_id,
+                                                'start_char': str(tok_start_char),
+                                                'end_char': str(tok_end_char)})
                     token_element.text = tok_text
                     seg_element.append(token_element)
 

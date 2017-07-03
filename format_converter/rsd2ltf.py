@@ -8,18 +8,18 @@ import codecs
 from tokenizer import Tokenizer
 
 
-def rsd2ltf(input_file, output_file, seg_option, tok_option):
+def rsd2ltf(input_file, output_file, seg_option, tok_option, extension):
     rsd_files = []
     output_files = []
     if os.path.isdir(input_file):
         assert os.path.isdir(output_file)
 
         for fn in os.listdir(input_file):
-            if ".rsd.txt" not in fn:
+            if extension not in fn:
                 continue
             rsd_files.append(os.path.join(input_file, fn))
             output_files.append(os.path.join(output_file,
-                                             fn.replace('rsd.txt', 'ltf.xml')))
+                                             fn.replace(extension, '.ltf.xml')))
     else:
         rsd_files = [input_file]
         output_files = [output_file]
@@ -69,7 +69,7 @@ def rsd2ltf(input_file, output_file, seg_option, tok_option):
                     "tokenization offset error in: %s-%d" % (rsd_f, i)
 
             # convert seg/tok result to ltf
-            doc_id = os.path.basename(rsd_f).replace('.rsd.txt', '')
+            doc_id = os.path.basename(rsd_f).replace(extension, '')
 
             root = ET.Element('LCTL_TEXT')
             doc_element = ET.Element('DOC', {'id': doc_id})
@@ -137,10 +137,13 @@ if __name__ == "__main__":
     parser.add_argument('--tok_option', default='unitok',
                         help="tokenization options: %s (default is unitok)" %
                              ', '.join(t.tokenizers.keys()))
+    parser.add_argument('--extension', default='.rsd.txt',
+                        help="extension of rsd file")
 
     args = parser.parse_args()
 
     input_rsd = args.rsd_input
     output_ltf = args.ltf_output
 
-    rsd2ltf(input_rsd, output_ltf, args.seg_option, args.tok_option)
+    rsd2ltf(input_rsd, output_ltf, args.seg_option,
+            args.tok_option, args.extension)

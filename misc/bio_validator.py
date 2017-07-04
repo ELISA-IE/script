@@ -1,6 +1,7 @@
 import sys
 import re
 import logging
+from collections import defaultdict
 
 
 if __name__ == '__main__':
@@ -14,6 +15,7 @@ if __name__ == '__main__':
 
     inpath = sys.argv[1]
     data = re.split('\n\s*\n', open(inpath).read())
+    count = defaultdict(int)
     for i in data:
         prev_beg = 0
         prev_end = 0
@@ -53,4 +55,9 @@ if __name__ == '__main__':
                 except AssertionError:
                     logger.info('beg is less than the previous end')
                     logger.info(repr(line))
+            count[tag] += 1
+
+    logger.info('tag stats:')
+    for t, c in sorted(count.items(), key=lambda x: x[1], reverse=True):
+        logger.info('%s: %s' % (t, c))
     logger.info('passed.')

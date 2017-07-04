@@ -15,7 +15,9 @@ if __name__ == '__main__':
 
     inpath = sys.argv[1]
     data = re.split('\n\s*\n', open(inpath).read())
-    count = defaultdict(int)
+    tag_count = defaultdict(int)
+    mention_count = defaultdict(int)
+    docids = set()
     for i in data:
         prev_beg = 0
         prev_end = 0
@@ -42,6 +44,7 @@ if __name__ == '__main__':
                 offset = ann[1]
                 m = re.match('(.+):(\d+)-(\d+)', offset)
                 docid = m.group(1)
+                docids.add(docid)
                 beg = int(m.group(2))
                 end = int(m.group(3))
                 try:
@@ -55,9 +58,11 @@ if __name__ == '__main__':
                 except AssertionError:
                     logger.info('beg is less than the previous end')
                     logger.info(repr(line))
-            count[tag] += 1
+            tag_count[tag] += 1
 
+    logger.info('# of docs: %s' % (len(docids)))
+    logger.info('# of sentences: %s' % (len(data)))
     logger.info('tag stats:')
-    for t, c in sorted(count.items(), key=lambda x: x[1], reverse=True):
-        logger.info('%s: %s' % (t, c))
-    logger.info('passed.')
+    for t, c in sorted(tag_count.items(), key=lambda x: x[0], reverse=True):
+        logger.info('    %s: %s' % (t, c))
+    logger.info('done.')

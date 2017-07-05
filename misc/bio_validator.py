@@ -19,8 +19,8 @@ if __name__ == '__main__':
     mention_count = defaultdict(int)
     docids = set()
     for i in data:
-        prev_beg = 0
-        prev_end = 0
+        prev_beg = -1
+        prev_end = -1
         sent = i.split('\n')
         for line in sent:
             if not line:

@@ -275,7 +275,3 @@ if __name__ == "__main__":
     print('%d B tags added to bio.' % counter['num_b_tag'])
     print('%d tokens re-tokenized.' % counter['num_retok_token'])
     print('%d mention offset errors.' % counter['mention_offset_error'])
-
-
-
-

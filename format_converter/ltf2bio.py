@@ -57,6 +57,8 @@ if __name__ == "__main__":
                         help='output file path')
     parser.add_argument('--ltf_filelist_fp', type=str,
                         help='ltf filelist path')
+    parser.add_argument('-s', action='store_true', default=False,
+                        help='separate output')
 
     args = parser.parse_args()
 
@@ -72,10 +74,14 @@ if __name__ == "__main__":
     for d_id in doc_ids:
         ltf_fp = os.path.join(args.ltf_dp, d_id+'.ltf.xml')
         assert os.path.exists(ltf_fp)
-
+        # print('processing: %s' % ltf_fp)
         ltf_str = codecs.open(ltf_fp, 'r', 'utf-8').read()
+        if args.s:
+            write2file(ltf2bio(ltf_str),
+                       '%s/%s.bio' % (args.output_fp, d_id))
         res.append(ltf2bio(ltf_str))
 
-    write2file('\n\n'.join(res), args.output_fp)
+    if not args.s:
+        write2file('\n\n'.join(res), args.output_fp)
 
     print('%d files converted.' % len(res))

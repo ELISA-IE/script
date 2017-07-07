@@ -10,6 +10,9 @@ def bio2tab(bio_str):
     label_index = 0
     b_tag_count = 0
     for sent in bio_sents:
+        sent = sent.strip()
+        if not sent:
+            continue
         sent_mentions = []
         tokens = sent.splitlines()
         current_mention = []

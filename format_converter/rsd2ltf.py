@@ -1,6 +1,8 @@
 #encoding=utf-8
 import os
 import argparse
+import sys
+import itertools
 import xml.dom.minidom
 import xml.etree.ElementTree as ET
 import codecs
@@ -8,120 +10,162 @@ import codecs
 from tokenizer import Tokenizer
 
 
-def rsd2ltf(input_file, output_file, seg_option, tok_option, extension):
-    rsd_files = []
-    output_files = []
-    if os.path.isdir(input_file):
-        assert os.path.isdir(output_file)
-
-        for fn in os.listdir(input_file):
-            if extension not in fn:
-                continue
-            rsd_files.append(os.path.join(input_file, fn))
-            output_files.append(os.path.join(output_file,
-                                             fn.replace(extension, '.ltf.xml')))
-    else:
-        rsd_files = [input_file]
-        output_files = [output_file]
-
+def rsd2ltf(rsd_str, doc_id,
+            seg_option='linebreak',
+            tok_option='unitok',
+            reverse_seg_tok=False):
     tokenizer = Tokenizer(seg_option, tok_option)
-    for k, rsd_f in enumerate(rsd_files):
-        try:
-            f = codecs.open(rsd_f, 'r', 'utf-8').read()
-            sents = tokenizer.run_segmenter(f)
-            tokens = tokenizer.run_tokenizer(sents)
 
-            # generate offset for sentences and tokens
-            indexer = 0
-            sent_offset = []
-            for i, s in enumerate(sents):
-                while not f[indexer:].startswith(s) and indexer < len(f):
-                    indexer += 1
-                if indexer < len(f):
-                    sent_start = indexer
-                    sent_end = sent_start + len(s) - 1
-                    assert f[sent_start:sent_end+1] == s, \
-                        "sentence offset not match %s-%d" % (rsd_f, i)
-                    sent_offset.append((sent_start, sent_end))
-                    indexer = sent_end + 1
+    if reverse_seg_tok:
+        # running segmentation and tokenization, then re-segment the tokenized
+        # sentences (use space to concatenate tokens. this solves segmentation
+        # problem, e.g. How are you?I'm fine.).
+        sents = tokenizer.run_segmenter(rsd_str)
+        raw_tokens = tokenizer.run_tokenizer(sents)
 
-            assert len(sent_offset) == len(sents), \
-                "sentence segmentation offset error in: %s" % rsd_f
-            token_offsets = []
-            for i, tok in enumerate(tokens):
-                sent_text = sents[i]
-                indexer = 0
-                t_offset = []
-                for j, t in enumerate(tok):
-                    while not sent_text[indexer:].startswith(t) and \
-                                    indexer < len(sent_text):
-                        indexer += 1
-                    if indexer < len(sent_text):
-                        t_start = indexer
-                        t_end = t_start + len(t) - 1
-                        assert sent_text[t_start:t_end+1] == t, \
-                            "token offset not match %s-%d-%d" % (rsd_f, i, j)
-                        t_offset.append((t_start, t_end))
-                        indexer = t_end + 1
-                token_offsets.append(t_offset)
+        # re-segment tokenized sentence
+        num_sent_reseg = 0
+        tokens = []
+        for i, t in enumerate(raw_tokens):
+            reseg = [item.split() for item in tokenizer.run_segmenter(' '.join(t))]
+            if len(reseg) > 1:
+                num_sent_reseg += 1
 
-                assert len(t_offset) == len(tok), \
-                    "tokenization offset error in: %s-%d" % (rsd_f, i)
+            tokens += reseg
 
-            # convert seg/tok result to ltf
-            doc_id = os.path.basename(rsd_f).replace(extension, '')
+        # compute offset for each token
+        indexer = 0
+        token_offset = []
+        for i, t in enumerate(itertools.chain(*tokens)):
+            while not rsd_str[indexer:].startswith(t) and \
+                            indexer < len(rsd_str):
+                indexer += 1
+            if indexer < len(rsd_str):
+                t_start = indexer
+                t_end = t_start + len(t) - 1
+                assert rsd_str[t_start:t_end + 1] == t, \
+                    "reverse_seg_tok token offset not match %s-%d" % (doc_id, i)
+                token_offset.append((t_start, t_end))
+                indexer = t_end + 1
 
-            root = ET.Element('LCTL_TEXT')
-            doc_element = ET.Element('DOC', {'id': doc_id})
-            text_element = ET.Element('TEXT')
-            root.append(doc_element)
-            doc_element.append(text_element)
+        assert len(token_offset) == len(list(itertools.chain(*tokens))), \
+            "reverse_seg_tok tokenization offset error in: %s" % doc_id
 
-            for i in range(len(sents)):
-                seg_text = sents[i]
-                seg_start_char = sent_offset[i][0]
-                seg_end_char = sent_offset[i][1]
+        # recover sent using tokens
+        sents = []
+        prev_token_end = token_offset[0][0]-1
+        token_index = 0
+        for i, t in enumerate(tokens):
+            sent = ''
+            for j, item in enumerate(t):
+                if j == 0:
+                    prev_token_end = token_offset[token_index][0] - 1
 
-                seg_id = '%s-%s' % (doc_id, str(i))
+                sent += ' ' * (token_offset[token_index][0] - prev_token_end - 1) + item
 
-                seg_element = ET.Element('SEG', {'id': seg_id,
-                                                 'start_char': str(seg_start_char),
-                                                 'end_char': str(seg_end_char)})
-                original_text_element = ET.Element('ORIGINAL_TEXT')
-                original_text_element.text = seg_text
-                seg_element.append(original_text_element)
+                prev_token_end = token_offset[token_index][1]
 
-                for j in range(len(tokens[i])):
-                    token_id = 'token-%d-%d' % (i, j)
-                    tok_text = tokens[i][j]
-                    if not tok_text:
-                        continue
-                    tok_start_char = int(token_offsets[i][j][0]) + seg_start_char
-                    tok_end_char = int(token_offsets[i][j][1]) + seg_start_char
+                token_index += 1
 
-                    assert f[tok_start_char:tok_end_char+1] == tok_text
+            assert sent in rsd_str, \
+                'reverse_seg_tok sentence offset error.'
 
-                    token_element = ET.Element('TOKEN',
-                                               {'id': token_id,
-                                                'start_char': str(tok_start_char),
-                                                'end_char': str(tok_end_char)})
-                    token_element.text = tok_text
-                    seg_element.append(token_element)
+            sents.append(sent)
 
-                text_element.append(seg_element)
+    else:
+        # running segmentation and tokenization
+        sents = tokenizer.run_segmenter(rsd_str)
+        tokens = tokenizer.run_tokenizer(sents)
 
-            # pretty print xml
-            root_str = ET.tostring(root, 'utf-8')
-            f_xml = xml.dom.minidom.parseString(root_str)
-            pretty_xml_as_string = f_xml.toprettyxml(encoding="utf-8")
-            f = open(output_files[k], 'wb')
-            f.write(pretty_xml_as_string)
-            f.close()
-        except AssertionError as e:
-            print(e)
+    # generate offset for sentences and tokens
+    indexer = 0
+    sent_offset = []
+    for i, s in enumerate(sents):
+        while not rsd_str[indexer:].startswith(s) and indexer < len(rsd_str):
+            indexer += 1
+        if indexer < len(rsd_str):
+            sent_start = indexer
+            sent_end = sent_start + len(s) - 1
+            assert rsd_str[sent_start:sent_end+1] == s, \
+                "sentence offset not match %s-%d" % (doc_id, i)
+            sent_offset.append((sent_start, sent_end))
+            indexer = sent_end + 1
 
-        if (k + 1) % 50 == 0:
-            print('%d files processed.' % (k + 1))
+    assert len(sent_offset) == len(sents), \
+        "sentence segmentation offset error in: %s" % doc_id
+
+    token_offsets = []
+    for i, tok in enumerate(tokens):
+        sent_text = sents[i]
+        indexer = 0
+        t_offset = []
+        for j, t in enumerate(tok):
+            while not sent_text[indexer:].startswith(t) and \
+                            indexer < len(sent_text):
+                indexer += 1
+            if indexer < len(sent_text):
+                t_start = indexer
+                t_end = t_start + len(t) - 1
+                assert sent_text[t_start:t_end+1] == t, \
+                    "token offset not match %s-%d-%d" % (doc_id, i, j)
+                t_offset.append((t_start, t_end))
+                indexer = t_end + 1
+        token_offsets.append(t_offset)
+
+        assert len(t_offset) == len(tok), \
+            "tokenization offset error in: %s-%d" % (doc_id, i)
+
+    # convert seg/tok result to ltf
+    root = ET.Element('LCTL_TEXT')
+    doc_element = ET.Element('DOC', {'id': doc_id})
+    text_element = ET.Element('TEXT')
+    root.append(doc_element)
+    doc_element.append(text_element)
+
+    for i in range(len(sents)):
+        seg_text = sents[i]
+        seg_start_char = sent_offset[i][0]
+        seg_end_char = sent_offset[i][1]
+
+        seg_id = '%s-%s' % (doc_id, str(i))
+
+        seg_element = ET.Element('SEG', {'id': seg_id,
+                                         'start_char': str(seg_start_char),
+                                         'end_char': str(seg_end_char)})
+        original_text_element = ET.Element('ORIGINAL_TEXT')
+        original_text_element.text = seg_text
+        seg_element.append(original_text_element)
+
+        for j in range(len(tokens[i])):
+            token_id = 'token-%d-%d' % (i, j)
+            tok_text = tokens[i][j]
+            if not tok_text:
+                continue
+            tok_start_char = int(token_offsets[i][j][0]) + seg_start_char
+            tok_end_char = int(token_offsets[i][j][1]) + seg_start_char
+
+            assert rsd_str[tok_start_char:tok_end_char+1] == tok_text
+
+            token_element = ET.Element('TOKEN',
+                                       {'id': token_id,
+                                        'start_char': str(tok_start_char),
+                                        'end_char': str(tok_end_char)})
+            token_element.text = tok_text
+            seg_element.append(token_element)
+
+        text_element.append(seg_element)
+
+    return root
+
+
+def write2file(ltf_root, out_file):
+    # pretty print xml
+    root_str = ET.tostring(ltf_root, 'utf-8')
+    f_xml = xml.dom.minidom.parseString(root_str)
+    pretty_xml_as_string = f_xml.toprettyxml(encoding="utf-8")
+    f = open(out_file, 'wb')
+    f.write(pretty_xml_as_string)
+    f.close()
 
 
 if __name__ == "__main__":
@@ -139,11 +183,48 @@ if __name__ == "__main__":
                              ', '.join(t.tokenizers.keys()))
     parser.add_argument('--extension', default='.rsd.txt',
                         help="extension of rsd file")
+    parser.add_argument('--reverse_seg_tok', action='store_true', default=False,
+                        help='first run tokenizaiton, and then segmentation.')
 
     args = parser.parse_args()
 
     input_rsd = args.rsd_input
     output_ltf = args.ltf_output
+    seg_option = args.seg_option
+    tok_option = args.tok_option
+    extension = args.extension
+    reverse_seg_tok = args.reverse_seg_tok
 
-    rsd2ltf(input_rsd, output_ltf, args.seg_option,
-            args.tok_option, args.extension)
+    rsd_files = []
+    output_files = []
+    if os.path.isdir(input_rsd):
+        assert os.path.isdir(output_ltf)
+
+        for fn in os.listdir(input_rsd):
+            if extension not in fn:
+                continue
+            rsd_files.append(os.path.join(input_rsd, fn))
+            output_files.append(os.path.join(output_ltf,
+                                             fn.replace(extension, '.ltf.xml')))
+    else:
+        rsd_files = [input_rsd]
+        output_files = [output_ltf]
+
+    for k, rsd_f in enumerate(rsd_files):
+        try:
+            rsd_str = codecs.open(rsd_f, 'r', 'utf-8').read()
+
+            doc_id = os.path.basename(rsd_f).replace(extension, '')
+
+            ltf_root = rsd2ltf(rsd_str, doc_id, seg_option, tok_option,
+                               reverse_seg_tok)
+
+            write2file(ltf_root, output_files[k])
+
+        except AssertionError as e:
+            print(e)
+
+        sys.stdout.write('%d files processed.\r' % k)
+        sys.stdout.flush()
+
+    sys.stdout.write('%d files processed.' % len(rsd_files))

@@ -7,6 +7,12 @@
 import argparse
 import codecs
 import collections
+import os
+import sys
+
+# dirty import from parent class
+script_dirname = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(os.path.join(script_dirname, os.pardir, 'format_converter'))
 from bio2tab import bio2tab
 
 
@@ -91,7 +97,8 @@ def split_data(input_bio_str, input_tab_str, ref_bio_str, ref_tab_str):
 def split_bio_by_doc(bio_str):
     bio = {}
     for sent in bio_str.split('\n\n'):
-        if not sent.strip():
+        sent = sent.strip()
+        if not sent:
             continue
         doc_id = sent.splitlines()[0].split()[1].split(':')[0]
         try:
@@ -234,6 +241,7 @@ def stats(bio_str, tab_str):
     num_tokens = 0
     doc_ids = set()
     for sent in bio_str.split('\n\n'):
+        sent = sent.strip()
         if not sent:
             continue
         tokens = sent.splitlines()

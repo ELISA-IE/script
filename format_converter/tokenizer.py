@@ -2,6 +2,7 @@
 import os
 import jieba
 import nltk
+import itertools
 import unicodedata as ud
 
 
@@ -12,8 +13,10 @@ class Tokenizer(object):
                            'cmn': self.seg_cmn,
                            'edl_spanish': self.seg_edl_spanish,
                            'edl_cmn': self.seg_edl_cmn,
+                           'nltk+linkebreak': self.seg_nltk_linebreak
                            }
         self.tokenizers = {'unitok': self.tok_unitok,
+                           'unitok_cut': self.tok_unitok_cut,
                            'regexp': self.tok_regexp,
                            'nltk_wordpunct': self.tok_nltk_wordpunct,
                            'space': self.tok_space,
@@ -57,7 +60,7 @@ class Tokenizer(object):
         :param plain_text:
         :return:
         """
-        result = [item.strip() for item in plain_text.split('\n')]
+        result = [item.strip() for item in plain_text.split('\n') if item.strip()]
 
         return result
 
@@ -70,6 +73,17 @@ class Tokenizer(object):
         result = [item.strip() for item in nltk.sent_tokenize(plain_text)]
 
         return result
+
+    def seg_nltk_linebreak(self, plain_text):
+        """
+        use nltk segmenter and then use "\n" as delimiter to re-segment.
+        :param plain_text:
+        :return:
+        """
+        nltk_result = '\n'.join(self.seg_nltk(plain_text))
+        linebreak_result = self.seg_linebreak(nltk_result)
+
+        return linebreak_result
 
     def seg_cmn(self, plain_text):
         """
@@ -125,6 +139,25 @@ class Tokenizer(object):
             s = unitok_tokenize(s).split()
             res.append(s)
 
+        return res
+
+    def tok_unitok_cut(self, sents):
+        res = []
+        num_sent_cut = 0
+        for s in sents:
+            s = unitok_tokenize(s).split()
+            if len(s) > 80:
+                sub_sents = [item.split() for item in nltk.sent_tokenize(' '.join(s))]
+                assert sum([len(item) for item in sub_sents]) == len(s)
+
+                # sub_sent = [list(group) for k, group in
+                #             itertools.groupby(s, lambda x: x == ".") if not k]
+                res += sub_sents
+                if len(sub_sents) > 1:
+                    num_sent_cut += 1
+            else:
+                res.append(s)
+        print('%d sentences longer than 80 and cut by delimiter ".".')
         return res
 
     def tok_regexp(self, sents):

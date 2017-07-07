@@ -14,7 +14,7 @@ from bio2tab import bio2tab
 import edl_eval
 
 
-def visualize(data, translation, pred_stats, ref_stats, scores, errors):
+def visualize(data, translation, pred_stats, ref_stats, scores, errors, is_rtl):
     print('=> visualizing...')
     html_result = dict()
     script_dirname = os.path.dirname(os.path.abspath(__file__))
@@ -33,7 +33,7 @@ def visualize(data, translation, pred_stats, ref_stats, scores, errors):
         data_to_render['has_src'] = True
         data_to_render['has_ref'] = True
         data_to_render['has_lex'] = True
-        data_to_render['rtl'] = True
+        data_to_render['rtl'] = is_rtl
 
         # add translation
         trans = []
@@ -61,8 +61,10 @@ def visualize(data, translation, pred_stats, ref_stats, scores, errors):
 
         html_result[doc_id] = html
 
-        if i+1 % 100 == 0:
-            print('  %d documents visualized.' % i)
+        sys.stdout.write('  %d documents visualized.\r' % i)
+        sys.stdout.flush()
+
+    print('  %d documents visualized in total.' % len(data))
 
     return html_result
 
@@ -119,7 +121,10 @@ def parse_bio(bio_str, no_ref, lexicon, error_dict):
                 ref = line[-2]
 
             # get error
-            e = error_dict[doc_id]
+            if doc_id in error_dict:
+                e = error_dict[doc_id]
+            else:
+                e = {}
             error_type = 'O'
             for j in range(int(start), int(end)):
                 if j in e:
@@ -156,7 +161,7 @@ def parse_bio(bio_str, no_ref, lexicon, error_dict):
 
 
 def load_translation(translation_dir, doc_ids):
-    if not os.path.exists(translation_dir):
+    if not translation_dir or not os.path.exists(translation_dir):
         return {}
 
     print('=> loading translation...')
@@ -187,7 +192,7 @@ def load_translation(translation_dir, doc_ids):
 
 
 def load_lexicon(lexicon_file):
-    if not os.path.exists(lexicon_file):
+    if not lexicon_file or not os.path.exists(lexicon_file):
         return {}
 
     print('=> loading lexicons...')
@@ -208,9 +213,17 @@ def load_lexicon(lexicon_file):
     return lexicon
 
 
-def write2file(html_result, out_dir):
-    for doc_id, html in html_result.items():
-        with codecs.open(os.path.join(out_dir, doc_id+'.html'), 'w', 'utf-8') as f:
+def write2file(html_result, out_dir, rank):
+    for i, (doc_id, html) in enumerate(html_result.items()):
+        if rank:
+            # add index to file name
+            index_len = len(str(len(html_result)))
+            index = str(i).zfill(index_len)
+            out_path = os.path.join(out_dir, '%s_%s.html' % (index, doc_id))
+        else:
+            out_path = os.path.join(out_dir, doc_id+'.html')
+
+        with codecs.open(out_path, 'w', 'utf-8') as f:
             f.write(html)
 
 
@@ -223,6 +236,10 @@ if __name__ == "__main__":
     parser.add_argument("--translation",
                         help="directory contains eng translation in ltf format")
     parser.add_argument("--lexicon")
+    parser.add_argument('--rtl', action="store_true", default=False,
+                        help="right to left alignment.")
+    parser.add_argument('--rank', action='store_true', default=True,
+                        help='rank document by f1 score.')
     args = parser.parse_args()
 
     bio_str = codecs.open(args.bio, 'r', 'utf-8').read()
@@ -292,6 +309,7 @@ if __name__ == "__main__":
                             overall_pred_stats,
                             overall_ref_stats,
                             overall_scores,
-                            overall_errors)
+                            overall_errors,
+                            args.rtl)
 
-    write2file(html_result, args.output_dir)
+    write2file(html_result, args.output_dir, args.rank)

@@ -27,13 +27,16 @@ def ltftab2bio(ltf_root, tab_str):
         for i in range(start_char, end_char + 1):
             label_offset_mapping[i] = l
 
+    #
+    # add label to bio
+    #
     b_tags = set()
     for i, sent_tokens in enumerate(doc_tokens):
         sent_res = []
 
         retok_sent_tokens = []
 
-        # re-tokenize token based label
+        # re-tokenize token based on labels in tab
         for token in sent_tokens:
             t_text = token[0]
             t_start_char = int(token[1])
@@ -159,6 +162,9 @@ def load_ltf(ltf_root):
 
 def parse_label(tab_str):
     labels = []
+    if not tab_str:
+        return labels
+
     num_overlap_label = 0
     doc_id = ''
     char_offset = set()
@@ -178,6 +184,8 @@ def parse_label(tab_str):
             overlapped_chars = char_offset.intersection(
                 set(range(start_char, end_char + 1))
             )
+
+            # pick the longest name if there are overlapped labels.
             if overlapped_chars:
                 num_overlap_label += 1
                 for i, l in enumerate(labels):
@@ -202,12 +210,24 @@ def parse_label(tab_str):
     if num_overlap_label:
         print('%d overlapped labels found in %s' % (num_overlap_label, doc_id))
 
+    # make sure each entry is unique
     labels = set(labels)
+
+    # check overlap labels again
     assert len(set([l[1] for l in labels])) == len(labels), \
         'overlap name found in parsed names.'
 
     return labels
 
+
+counter = dict()
+counter['num_labels'] = 0
+counter['num_b_tag'] = 0
+counter['num_retok_token'] = 0
+counter['mention_offset_error'] = 0
+counter['num_doc_added'] = 0
+counter['num_ltf_files'] = 0
+counter['num_tab_files'] = 0
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -219,19 +239,14 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    counter = dict()
-    counter['num_labels'] = 0
-    counter['num_b_tag'] = 0
-    counter['num_retok_token'] = 0
-    counter['mention_offset_error'] = 0
-
-    num_doc_added = 0
     if args.d:
         combined_bio = []
         for fn in os.listdir(args.ltf):
             try:
                 if not fn.endswith(".ltf.xml"):
                     continue
+
+
                 ltf_file = os.path.join(args.ltf, fn)
                 tab_file = os.path.join(args.tab,
                                         fn.replace(".ltf.xml", '.tab'))
@@ -245,16 +260,16 @@ if __name__ == "__main__":
 
                 combined_bio.append(bio_str)
 
-                num_doc_added += 1
+                counter['num_doc_added'] += 1
             except AssertionError as e:
                 print('ERROR:', e)
 
         write2file('\n\n'.join(combined_bio), args.bio_file)
 
-        num_ltf_files = len([fn for fn in os.listdir(args.ltf)
-                             if fn.endswith('.ltf.xml')])
-        num_tab_files = len([fn for fn in os.listdir(args.tab)
-                             if fn.endswith('.tab')])
+        counter['num_ltf_files'] = len([fn for fn in os.listdir(args.ltf)
+                                        if fn.endswith('.ltf.xml')])
+        counter['num_tab_files'] = len([fn for fn in os.listdir(args.tab)
+                                        if fn.endswith('.tab')])
 
     else:
         ltf_root = ET.parse(args.ltf)
@@ -264,13 +279,14 @@ if __name__ == "__main__":
 
         write2file(bio_str, args.bio_file)
 
-        num_doc_added = 1
-        num_ltf_files = 1
-        num_tab_files = 1
+        counter['num_doc_added'] = 1
+        counter['num_ltf_files'] = 1
+        counter['num_tab_files'] = 1
 
-    print('%d ltf files parsed.' % num_ltf_files)
-    print('%d tab files parsed.' % num_tab_files)
-    print('%d documents added to bio.' % num_doc_added)
+    print('\n=> ltftab2bio stats:')
+    print('%d ltf files parsed.' % counter['num_ltf_files'])
+    print('%d tab files parsed.' % counter['num_tab_files'])
+    print('%d documents added to bio.' % counter['num_doc_added'])
     print('%d names parsed in tab file.' % counter['num_labels'])
     print('%d B tags added to bio.' % counter['num_b_tag'])
     print('%d tokens re-tokenized.' % counter['num_retok_token'])

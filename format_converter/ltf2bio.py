@@ -12,6 +12,8 @@ def ltf2bio(ltf_str):
         sent_res = []
         for token in sent:
             t_text = token[0]
+            if not t_text.strip():
+                continue
             if t_text is None:
                 t_text = ''
             t_doc_id = token[1]

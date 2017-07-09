@@ -91,6 +91,15 @@ def split_data(input_bio_str, input_tab_str, ref_bio_str, ref_tab_str):
     input_tab = split_tab_by_doc(input_tab_str)
     ref_tab = split_tab_by_doc(ref_tab_str)
 
+    # if no name found in a doc, make tab empty
+    for d_id in input_bio:
+        if d_id not in input_tab:
+            input_tab[d_id] = ''
+
+    for d_id in ref_bio:
+        if d_id not in ref_tab:
+            ref_tab[d_id] = ''
+
     return input_bio, ref_bio, input_tab, ref_tab
 
 
@@ -115,6 +124,8 @@ def split_bio_by_doc(bio_str):
 def split_tab_by_doc(tab_str):
     tab = {}
     for line in tab_str.splitlines():
+        if not line:
+            continue
         doc_id = line.split('\t')[3].split(':')[0]
         try:
             tab[doc_id].append(line)

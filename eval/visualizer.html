@@ -414,7 +414,7 @@
                     </div>
 
                     <!--reference sentence-->
-                    {% if has_ref %}
+                    {% if not no_ref %}
                         <div class="doc-segment-ref"
                              rtl="{% filter lower %}{{ rtl }}{% endfilter %}">
                             {% for token in seg.tokens %}

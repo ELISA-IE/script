@@ -14,16 +14,17 @@ from bio2tab import bio2tab
 import edl_eval
 
 
-def visualize(data, translation, pred_stats, ref_stats, scores, errors, is_rtl):
+def visualize(data, translation, pred_stats, ref_stats, scores, errors,
+              is_rtl, no_ref):
     print('=> visualizing...')
     html_result = dict()
     script_dirname = os.path.dirname(os.path.abspath(__file__))
 
     # sort overall score by f1
-    sorted_scores = sorted(overall_scores.items(),
+    sorted_scores = sorted(scores.items(),
                            key=lambda x: x[1]['overall'][2])
 
-    for i in range(len(data)):
+    for i in range(len(data))[:500]:
         doc_id = sorted_scores[i][0]
         segs = data[doc_id]
 
@@ -34,6 +35,7 @@ def visualize(data, translation, pred_stats, ref_stats, scores, errors, is_rtl):
         data_to_render['has_ref'] = True
         data_to_render['has_lex'] = True
         data_to_render['rtl'] = is_rtl
+        data_to_render['no_ref'] = no_ref
 
         # add translation
         trans = []
@@ -152,6 +154,10 @@ def parse_bio(bio_str, no_ref, lexicon, error_dict):
         except KeyError:
             res[doc_id] = [seg]
 
+        sys.stdout.write('  %d sentences and %d tokens parsed from bio.\r' %
+                         (num_sent, num_token))
+        sys.stdout.flush()
+
     num_doc = len(res)
 
     print('  %d documents, %d sentences and %d tokens parsed from bio.' %
@@ -238,10 +244,11 @@ if __name__ == "__main__":
     parser.add_argument("--lexicon")
     parser.add_argument('--rtl', action="store_true", default=False,
                         help="right to left alignment.")
-    parser.add_argument('--rank', action='store_true', default=True,
+    parser.add_argument('--rank', action='store_true', default=False,
                         help='rank document by f1 score.')
     args = parser.parse_args()
 
+    print("=> loading bio data...")
     bio_str = codecs.open(args.bio, 'r', 'utf-8').read()
 
     #
@@ -250,15 +257,18 @@ if __name__ == "__main__":
     lexicon = load_lexicon(args.lexicon)
 
     #
-    # evluate edl results
+    # evaluate edl results
     #
     # generate ref bio str and tab str
     ref_bio_str = ''
-    for line in bio_str.splitlines():
-        if not line.strip():
-            ref_bio_str += line
-        line = ' '.join(line.split()[:-1])
-        ref_bio_str += line + '\n'
+    if args.no_ref:
+        ref_bio_str = bio_str
+    else:
+        for line in bio_str.splitlines():
+            if not line.strip():
+                ref_bio_str += line
+            line = ' '.join(line.split()[:-1])
+            ref_bio_str += line + '\n'
     pred_tab = bio2tab(bio_str)
     ref_tab = bio2tab(ref_bio_str)
 
@@ -310,6 +320,7 @@ if __name__ == "__main__":
                             overall_ref_stats,
                             overall_scores,
                             overall_errors,
-                            args.rtl)
+                            args.rtl,
+                            args.no_ref)
 
     write2file(html_result, args.output_dir, args.rank)

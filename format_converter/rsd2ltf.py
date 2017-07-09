@@ -13,10 +13,10 @@ from tokenizer import Tokenizer
 def rsd2ltf(rsd_str, doc_id,
             seg_option='linebreak',
             tok_option='unitok',
-            reverse_seg_tok=False):
+            re_segment=False):
     tokenizer = Tokenizer(seg_option, tok_option)
 
-    if reverse_seg_tok:
+    if re_segment:
         # running segmentation and tokenization, then re-segment the tokenized
         # sentences (use space to concatenate tokens. this solves segmentation
         # problem, e.g. How are you?I'm fine.).
@@ -44,12 +44,12 @@ def rsd2ltf(rsd_str, doc_id,
                 t_start = indexer
                 t_end = t_start + len(t) - 1
                 assert rsd_str[t_start:t_end + 1] == t, \
-                    "reverse_seg_tok token offset not match %s-%d" % (doc_id, i)
+                    "re_segment token offset not match %s-%d" % (doc_id, i)
                 token_offset.append((t_start, t_end))
                 indexer = t_end + 1
 
         assert len(token_offset) == len(list(itertools.chain(*tokens))), \
-            "reverse_seg_tok tokenization offset error in: %s" % doc_id
+            "re_segment tokenization offset error in: %s" % doc_id
 
         # recover sent using tokens
         sents = []
@@ -68,7 +68,7 @@ def rsd2ltf(rsd_str, doc_id,
                 token_index += 1
 
             assert sent in rsd_str, \
-                'reverse_seg_tok sentence offset error.'
+                're_segment sentence offset error.'
 
             sents.append(sent)
 
@@ -183,7 +183,7 @@ if __name__ == "__main__":
                              ', '.join(t.tokenizers.keys()))
     parser.add_argument('--extension', default='.rsd.txt',
                         help="extension of rsd file")
-    parser.add_argument('--reverse_seg_tok', action='store_true', default=False,
+    parser.add_argument('--re_segment', action='store_true', default=False,
                         help='first run tokenizaiton, and then segmentation.')
 
     args = parser.parse_args()
@@ -193,7 +193,7 @@ if __name__ == "__main__":
     seg_option = args.seg_option
     tok_option = args.tok_option
     extension = args.extension
-    reverse_seg_tok = args.reverse_seg_tok
+    re_segment = args.re_segment
 
     rsd_files = []
     output_files = []
@@ -217,7 +217,7 @@ if __name__ == "__main__":
             doc_id = os.path.basename(rsd_f).replace(extension, '')
 
             ltf_root = rsd2ltf(rsd_str, doc_id, seg_option, tok_option,
-                               reverse_seg_tok)
+                               re_segment)
 
             write2file(ltf_root, output_files[k])
 

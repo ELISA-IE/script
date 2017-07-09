@@ -2,6 +2,7 @@ import argparse
 import codecs
 import xml.etree.ElementTree as ET
 import gzip
+import sys
 
 
 def elisa2bio(elisa_file, output_file):
@@ -9,7 +10,7 @@ def elisa2bio(elisa_file, output_file):
     #
     # parse elisa file
     #
-    print("parsing elisa file..."),
+    print("=> parsing elisa file..."),
     if elisa_file.endswith('.gz'):
         with gzip.open(elisa_file, 'rb') as f:
             elisa_file_content = f.read()
@@ -21,6 +22,7 @@ def elisa2bio(elisa_file, output_file):
     #
     # generate bio
     #
+    print("=> generating bio...")
     bio_results = []
     for doc in root.findall('DOCUMENT'):
         doc_num += 1
@@ -73,8 +75,10 @@ def elisa2bio(elisa_file, output_file):
 
         bio_results.append('\n\n'.join(bio_resut))
 
-        if doc_num % 100 == 0:
-            print("%d documents processed." % doc_num)
+        sys.stdout.write('%d documents processed.\r' % doc_num)
+        sys.stdout.flush()
+
+    print("%d documents processed in total." % doc_num)
 
     with codecs.open(output_file, 'w', 'utf-8') as f:
         f.write('\n\n'.join(bio_results)+'\n')

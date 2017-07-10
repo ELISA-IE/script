@@ -81,7 +81,7 @@ def ltftab2bio(ltf_root, tab_str):
                 counter['num_retok_token'] += 1
 
         # add label to bio
-        for token in retok_sent_tokens:
+        for j, token in enumerate(retok_sent_tokens):
             t_text = token[0]
             t_start_char = int(token[1])
             t_end_char = int(token[2])
@@ -89,7 +89,7 @@ def ltftab2bio(ltf_root, tab_str):
             # get token bio tag
             if t_start_char in label_offset_mapping.keys():
                 entity_type = label_offset_mapping[t_start_char][3]
-                if t_start_char == label_offset_mapping[t_start_char][1]:
+                if t_start_char == label_offset_mapping[t_start_char][1] or j == 0:
                     tag = '%s-%s' % ('B', entity_type)
                     b_tags.add(t_start_char)
                 else:

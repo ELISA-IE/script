@@ -31,15 +31,15 @@ if __name__ == '__main__':
             try:
                 assert not line.startswith(' ')
             except AssertionError:
-                logger.info('line starts with space:')
-                logger.info(repr(line))
+                logger.error('line starts with space:')
+                logger.error(repr(line))
 
             ann = line.split(' ')
             try:
                 assert len(ann) >= 2
             except AssertionError:
-                logger.info('line is less than two columns')
-                logger.info(repr(line))
+                logger.error('line is less than two columns')
+                logger.error(repr(line))
             tok = ann[0]
             tag = ann[-1]
 
@@ -60,8 +60,8 @@ if __name__ == '__main__':
                 try:
                     assert curr_mention != []
                 except AssertionError:
-                    logger.info('missing B-')
-                    logger.info(repr(line))
+                    logger.warning('missing B-')
+                    logger.warning(repr(line))
                 curr_mention.append((tok, etype))
             if i == len(sent) - 1 and curr_mention:
                 sent_mentions.append(curr_mention)
@@ -78,14 +78,14 @@ if __name__ == '__main__':
                 try:
                     assert end >= beg
                 except AssertionError:
-                    logger.info('end is less than beg')
-                    logger.info(repr(line))
+                    logger.error('end is less than beg')
+                    logger.error(repr(line))
 
                 try:
                     assert beg > prev_end
                 except AssertionError:
-                    logger.info('beg is less than the previous end')
-                    logger.info(repr(line))
+                    logger.error('beg is less than the previous end')
+                    logger.error(repr(line))
             tag_count[tag] += 1
 
 

@@ -35,7 +35,7 @@ def elisa2bio(elisa_file, output_file):
                 seg_src_end_char = int(seg_src.get('end_char'))
                 seg_src_orig_raw = seg_src.find('ORIG_RAW_SOURCE').text
                 # use orig_raw as tokenized text if not tokenization founds
-                if not seg_src.find('LRLP_TOKENIZED_SOURCE'):
+                if seg_src.find('LRLP_TOKENIZED_SOURCE') is None:
                     seg_src_tokenized = seg_src_orig_raw
                 else:
                     seg_src_tokenized = seg_src.find('LRLP_TOKENIZED_SOURCE').text

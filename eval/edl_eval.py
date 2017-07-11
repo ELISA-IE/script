@@ -41,7 +41,7 @@ def evaluate(input_tab_str, ref_tab_str):
 
     # compute p, r, f scores for each type
     scores = collections.OrderedDict()
-    for etype, ref_num in ref_counts.items():
+    for etype, ref_num in sorted(ref_counts.items()):
         if etype not in input_counts:
             input_num = 0
         else:
@@ -152,7 +152,7 @@ def error_analysis(input_tab_str, ref_tab_str):
 
 
 def compute_error(input_tab, ref_tab):
-    errors = {}
+    errors = collections.OrderedDict()
     errors['missing'] = {}
     errors['spurious'] = {}
     errors['boundary'] = {}
@@ -404,12 +404,3 @@ if __name__ == "__main__":
         # error analysis
         errors = error_analysis(input_tab_str, ref_tab_str)
         print_errors(errors)
-
-
-
-
-
-
-
-
-

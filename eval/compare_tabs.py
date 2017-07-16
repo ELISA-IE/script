@@ -1,6 +1,6 @@
-#!/usr/bin/env python3
 import re
 import sys
+from collections import defaultdict
 
 
 def read_tab(ptab):
@@ -51,6 +51,20 @@ def read_tab_m2t(ptab):
     return m2t
 
 
+def read_dic(pdic):
+    RE_STRIP = r' \([^)]*\)|\<[^)]*\>|,|"|\.|\'|:|-'
+    res = defaultdict(lambda : defaultdict(int))
+    with open(pdic, 'r') as f:
+        for line in f:
+            src, trg = line.rstrip('\n').split('\t')
+            # trg = ' '.join(re.sub(RE_STRIP, '', trg).strip().split())
+            res[src][trg] += 1
+    for i in res:
+        res[i] = [x for x, y in sorted(res[i].items(),
+                                       key=lambda x: x[1], reverse=True)]
+    return res
+
+
 def count_mention(mention):
     n = 0
     for t in mention:
@@ -64,6 +78,9 @@ if __name__ == '__main__':
 
     a = read_tab(pa)
     b = read_tab(pb)
+
+    pdic = '/nas/data/m1/panx2/lorelei/data/dict/il3/il3-eng.dict'
+    dic = read_dic(pdic)
 
     print('a: %s' % pa)
     print('b: %s' % pb)
@@ -86,21 +103,21 @@ if __name__ == '__main__':
     #     print i
     for i in sorted(a_names - b_names, key=lambda x: count_mention(a_m2t[x]),
                     reverse=True):
-        print(i, a_m2t[i])
+        print(i, a_m2t[i], '|'.join(dic[i]))
     print('')
     print('b - a: %s' % len(b_names - a_names))
     # for i in b_names - a_names:
     #     print i
     for i in sorted(b_names - a_names, key=lambda x: count_mention(b_m2t[x]),
                     reverse=True):
-        print(i, b_m2t[i])
+        print(i, b_m2t[i], '|'.join(dic[i]))
     print('')
 
     print('names sort by frequence a:')
     for i in sorted(a_m2t, key=lambda x: count_mention(a_m2t[x]), reverse=True):
-        print(i, a_m2t[i])
+        print(i, a_m2t[i], '|'.join(dic[i]))
     print('')
     print('names sort by frequence b:')
     for i in sorted(b_m2t, key=lambda x: count_mention(b_m2t[x]), reverse=True):
-        print(i, b_m2t[i])
+        print(i, b_m2t[i], '|'.join(dic[i]))
     print('')

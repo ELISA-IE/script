@@ -1,5 +1,8 @@
 import re
 import sys
+import argparse
+import logging
+import os
 from collections import defaultdict
 
 
@@ -9,6 +12,7 @@ def read_tab(ptab):
         for line in f:
             tmp = line.rstrip('\n').split('\t')
             mention = tmp[2]
+            mention = mention.replace('"', '')
             kbid = tmp[4]
             etype = tmp[5]
             mtype = tmp[6]
@@ -35,6 +39,7 @@ def read_tab_m2t(ptab):
         for line in f:
             tmp = line.rstrip('\n').split('\t')
             mention = tmp[2]
+            mention = mention.replace('"', '')
             kbid = tmp[4]
             etype = tmp[5]
             mtype = tmp[6]
@@ -73,51 +78,74 @@ def count_mention(mention):
 
 
 if __name__ == '__main__':
-    pa = sys.argv[1]
-    pb = sys.argv[2]
+    logger = logging.getLogger()
+    logging.basicConfig(format='%(asctime)s: %(levelname)s: %(message)s')
+    logging.root.setLevel(level=logging.INFO)
 
-    a = read_tab(pa)
-    b = read_tab(pb)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('pa', type=str, help='path to tab a')
+    parser.add_argument('pb', type=str, help='path to tab b')
+    parser.add_argument('outdir', type=str, help='output dir')
+    args = parser.parse_args()
 
-    pdic = '/nas/data/m1/panx2/lorelei/data/dict/il3/il3-eng.dict'
-    dic = read_dic(pdic)
+    try:
+        os.mkdir(args.outdir)
+    except FileExistsError:
+        pass
 
-    print('a: %s' % pa)
-    print('b: %s' % pb)
-    print('')
-    print('# docs:')
-    print('a: %s' % len(a))
-    print('b: %s' % len(b))
-    print('')
-    print('# tagged names:')
-    print('a: %s' % count(a))
-    print('b: %s' % count(b))
-    print('')
+    tab_a = read_tab(args.pa)
+    tab_b = read_tab(args.pb)
 
-    a_m2t = read_tab_m2t(pa)
-    b_m2t = read_tab_m2t(pb)
-    a_names = set(a_m2t.keys())
-    b_names = set(b_m2t.keys())
-    print('a - b: %s' % len(a_names - b_names))
-    # for i in a_names - b_names:
-    #     print i
-    for i in sorted(a_names - b_names, key=lambda x: count_mention(a_m2t[x]),
-                    reverse=True):
-        print(i, a_m2t[i], '|'.join(dic[i]))
-    print('')
-    print('b - a: %s' % len(b_names - a_names))
-    # for i in b_names - a_names:
-    #     print i
-    for i in sorted(b_names - a_names, key=lambda x: count_mention(b_m2t[x]),
-                    reverse=True):
-        print(i, b_m2t[i], '|'.join(dic[i]))
-    print('')
+    logger.info('a: %s' % args.pa)
+    logger.info('b: %s' % args.pb)
+    logger.info('# docs:')
+    logger.info('a: %s' % len(tab_a))
+    logger.info('b: %s' % len(tab_b))
+    logger.info('# tagged names:')
+    logger.info('a: %s' % count(tab_a))
+    logger.info('b: %s' % count(tab_b))
 
-    print('names sort by frequence a:')
-    for i in sorted(a_m2t, key=lambda x: count_mention(a_m2t[x]), reverse=True):
-        print(i, a_m2t[i], '|'.join(dic[i]))
-    print('')
-    print('names sort by frequence b:')
-    for i in sorted(b_m2t, key=lambda x: count_mention(b_m2t[x]), reverse=True):
-        print(i, b_m2t[i], '|'.join(dic[i]))
-    print('')
+    m2t_a = read_tab_m2t(args.pa)
+    m2t_b = read_tab_m2t(args.pb)
+    names_a = set(m2t_a.keys())
+    names_b = set(m2t_b.keys())
+
+    with open('%s/a-b' % args.outdir, 'w') as fw:
+        fw.write('a - b: %s\n' % len(names_a - names_b))
+        for i in sorted(names_a - names_b,
+                        key=lambda x: count_mention(m2t_a[x]),
+                        reverse=True):
+            fw.write('%s\t%s\n' % (i, m2t_a[i]))
+
+    with open('%s/b-a' % args.outdir, 'w') as fw:
+        fw.write('b - a: %s\n' % len(names_b - names_a))
+        for i in sorted(names_b - names_a,
+                        key=lambda x: count_mention(m2t_b[x]),
+                        reverse=True):
+            fw.write('%s\t%s\n' % (i, m2t_b[i]))
+
+    with open('%s/a' % args.outdir, 'w') as fw:
+        for i in sorted(m2t_a,
+                        key=lambda x: count_mention(m2t_a[x]),
+                        reverse=True):
+            fw.write('%s\t%s\n' % (i, m2t_a[i]))
+
+    with open('%s/b' % args.outdir, 'w') as fw:
+        for i in sorted(m2t_b,
+                        key=lambda x: count_mention(m2t_b[x]),
+                        reverse=True):
+            fw.write('%s\t%s\n' % (i, m2t_b[i]))
+
+    for i in m2t_a:
+        if i not in m2t_b:
+            m2t_b[i] = {}
+    for i in m2t_b:
+        if i not in m2t_a:
+            m2t_a[i] = {}
+    with open('%s/ab' % args.outdir, 'w') as fw:
+        fw.write('mention\tref\tsys\n')
+        for i in sorted(m2t_a,
+                        key=lambda x: \
+                        count_mention(m2t_a[x])+count_mention(m2t_b[x]),
+                        reverse=True):
+            fw.write('%s\t%s\t%s\n' % (i, m2t_a[i], m2t_b[i]))

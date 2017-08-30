@@ -24,7 +24,7 @@ def visualize(data, translation, pred_stats, ref_stats, scores, errors,
     sorted_scores = sorted(scores.items(),
                            key=lambda x: x[1]['overall'][2])
 
-    for i in range(len(data))[:500]:
+    for i in range(len(data))[:]:
         doc_id = sorted_scores[i][0]
         segs = data[doc_id]
 
@@ -204,15 +204,23 @@ def load_lexicon(lexicon_file):
     print('=> loading lexicons...')
     lexicon = dict()
 
-    for line in codecs.open(lexicon_file):
-        line = line.strip()
-        if not line:
-            continue
-        line = line.split('\t')
-        text = line[0]
-        lex = line[1]
-        lex = html.escape(lex)
-        lexicon[text] = lex
+    if lexicon_file.endswith('.xml'):
+        for event, elem in ET.iterparse(lexicon_file):
+            if elem.tag != 'ENTRY':
+                continue
+            lemma = elem.find('LEMMA')
+            gloss = elem.find('GLOSS')
+            lexicon[lemma] = gloss
+    else:
+        for line in codecs.open(lexicon_file):
+            line = line.strip()
+            if not line:
+                continue
+            line = line.split('\t')
+            text = line[0]
+            lex = line[1]
+            lex = html.escape(lex)
+            lexicon[text] = lex
 
     print('  %d entries loaded.' % len(lexicon))
 
@@ -275,6 +283,7 @@ if __name__ == "__main__":
     input_bio, ref_bio, input_tab, ref_tab = edl_eval.split_data(
         bio_str, pred_tab, ref_bio_str, ref_tab
     )
+    # evaluate result for each document
     overall_pred_stats = {}
     overall_ref_stats = {}
     overall_scores = {}

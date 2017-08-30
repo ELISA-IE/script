@@ -1,5 +1,6 @@
 import argparse
 import codecs
+import xml
 import xml.etree.ElementTree as ET
 import os
 
@@ -127,7 +128,7 @@ def load_ltf(ltf_root):
     doc_tokens = []
     doc_id = ltf_root.find('DOC').get('id')
     doc_text = ''
-    prev_seg_end = 1
+    prev_seg_end = -1
     for seg in ltf_root.find('DOC').find('TEXT').findall('SEG'):
         sent_tokens = []
         seg_text = seg.find('ORIGINAL_TEXT').text
@@ -246,7 +247,6 @@ if __name__ == "__main__":
                 if not fn.endswith(".ltf.xml"):
                     continue
 
-
                 ltf_file = os.path.join(args.ltf, fn)
                 tab_file = os.path.join(args.tab,
                                         fn.replace(".ltf.xml", '.tab'))
@@ -262,7 +262,9 @@ if __name__ == "__main__":
 
                 counter['num_doc_added'] += 1
             except AssertionError as e:
-                print('ERROR:', e)
+                print('ERROR:', ltf_file, e)
+            except xml.etree.ElementTree.ParseError as e:
+                print('ERROR: ', ltf_file, e)
 
         write2file('\n\n'.join(combined_bio), args.bio_file)
 

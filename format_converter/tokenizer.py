@@ -2,6 +2,7 @@
 import os
 import jieba
 import nltk
+import re
 import itertools
 import unicodedata as ud
 
@@ -13,7 +14,8 @@ class Tokenizer(object):
                            'cmn': self.seg_cmn,
                            'edl_spanish': self.seg_edl_spanish,
                            'edl_cmn': self.seg_edl_cmn,
-                           'nltk+linkebreak': self.seg_nltk_linebreak
+                           'nltk+linkebreak': self.seg_nltk_linebreak,
+                           'tigrinya': self.seg_tigrinya
                            }
         self.tokenizers = {'unitok': self.tok_unitok,
                            'unitok_cut': self.tok_unitok_cut,
@@ -130,6 +132,25 @@ class Tokenizer(object):
     def seg_edl_cmn(self, plain_text):
         return self.seg_edl(plain_text, 'edl_cmn')
 
+    def seg_tigrinya(self, plain_text):
+        result = [item.strip() for item in plain_text.split('\n') if
+                  item.strip()]
+
+        updated_result = []
+        for r in result:
+            if '።' in r:
+                sents = []
+                start = 0
+                for i, char in enumerate(r):
+                    if char == '።':
+                        sents.append(r[start:i+1])
+                        start = i + 1
+                updated_result += sents
+            else:
+                updated_result.append(r)
+
+        return updated_result
+
     #
     # tokenizers
     #
@@ -205,7 +226,10 @@ def unitok_tokenize(data):
     for offset, char in enumerate(data):
         cc = ud.category(char)
         # separate text by punctuation or symbol
-        if cc.startswith("P") or cc.startswith("S"):
+        if char in ['ʼ', '’', '‘', '´', '′', "'"]:  # do not tokenize oromo apostrophe
+            toks.append(char)
+        elif cc.startswith("P") or cc.startswith("S") \
+                or char in ['።', '፡']:  # Tigrinya period and comma
             toks.append(' ')
             toks.append(char)
             toks.append(' ')

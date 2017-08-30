@@ -145,7 +145,6 @@
         }
 
         .doc-segment-latin, .doc-segment-trans, .doc-segment-lex {
-            padding: 5px;
             font-size: 10px;
             font-family: Menlo, monospace;
             color: #9b9b9b;
@@ -296,7 +295,8 @@
               has-trg="{% filter lower %}{{ has_trg }}{% endfilter %}"
               lang="{{ lang }}"
               doc-id="{{ doc_id }}"
-              rtl="{% filter lower %}{{ rtl }}{% endfilter %}"></data>
+              rtl="{{ rtl }}">
+        </data>
 
         <!--display edl evaluation results-->
         <div class="edl_eval">
@@ -392,81 +392,81 @@
         <div id="doc" doc-id="{{ doc_id }}">
             <!--display segments-->
             {% for seg in segs %}
-                {% set seg_loop = loop %}
-                <div class="doc-segment" seg-id="{{ seg_loop.index0 }}">
-                    <div class="doc-segment-index">{{ seg_loop.index0 }}</div>
+            {% set seg_loop = loop %}
+            <div class="doc-segment" seg-id="{{ seg_loop.index0 }}">
+                <div class="doc-segment-index">{{ seg_loop.index0 }}</div>
 
-                    <!--src sentence-->
-                    <div class="doc-segment-src"
-                         rtl="{% filter lower %}{{ rtl }}{% endfilter %}">
-                         start-char="{{ seg.start_char }}"
-                         end-char="{{ seg.end_char }}"
-                         text="{{ seg.text }}">
-                        {% for token in seg.tokens %}
-                            <span class="doc-token"
-                                  seg_index = "{{ seg_loop.index0 }}"
-                                  token_index="{{ loop.index0 }}"
-                                  label="{{ token.label }}"
-                                  error="{{ token.error }}">
+                <!--src sentence-->
+                <div class="doc-segment-src"
+                     rtl="{% filter lower %}{{ rtl }}{% endfilter %}"
+                     start-char="{{ seg.start_char }}"
+                     end-char="{{ seg.end_char }}"
+                     text="{{ seg.text }}">
+                    {% for token in seg.tokens %}
+                    <span class="doc-token"
+                          seg_index = "{{ seg_loop.index0 }}"
+                          token_index="{{ loop.index0 }}"
+                          label="{{ token.label }}"
+                          error="{{ token.error }}">
                                 {{ token.text }}
                             </span>
-                        {% endfor %}
-                    </div>
+                    {% endfor %}
+                </div>
 
-                    <!--reference sentence-->
-                    {% if not no_ref %}
-                        <div class="doc-segment-ref"
-                             rtl="{% filter lower %}{{ rtl }}{% endfilter %}">
-                            {% for token in seg.tokens %}
-                                <span class="doc-token"
-                                      seg_index = "{{ seg_loop.index0 }}"
-                                      token_index="{{ loop.index0 }}"
-                                      label="{{ token.ref }}">
+                <!--reference sentence-->
+                {% if not no_ref %}
+                <div class="doc-segment-ref"
+                     rtl="{% filter lower %}{{ rtl }}{% endfilter %}">
+                    {% for token in seg.tokens %}
+                    <span class="doc-token"
+                          seg_index = "{{ seg_loop.index0 }}"
+                          token_index="{{ loop.index0 }}"
+                          label="{{ token.ref }}">
                                     {{ token.text }}
                                 </span>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
 
-                    <!--translation sentence-->
-                    {% if has_trans %}
-                        {% set trans_seg = trans[seg_loop.index0] %}
-                        <div class="doc-segment-trans"
-                             rtl="{% filter lower %}{{ rtl }}{% endfilter %}">
-                            {% for token in trans_seg %}
-                                <span class="doc-token">
+                <!--translation sentence-->
+                {% if has_trans %}
+                {% set trans_seg = trans[seg_loop.index0] %}
+                <div class="doc-segment-trans"
+                     rtl="{% filter lower %}{{ rtl }}{% endfilter %}">
+                    {% for token in trans_seg %}
+                    <span class="doc-token">
                                     {{ token }}
                                 </span>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
 
-                    <!--lexicon sentence-->
-                    {% if has_lex %}
-                        <div class="doc-segment-lex"
-                         rtl="{% filter lower %}{{ rtl }}{% endfilter %}">
-                        {% for token in seg.tokens %}
-                            <span class="doc-token"
-                                  seg_index = "{{ seg_loop.index0}}"
-                                  token_index="{{ loop.index0 }}">
+                <!--lexicon sentence-->
+                {% if has_lex %}
+                <div class="doc-segment-lex"
+                     rtl="{% filter lower %}{{ rtl }}{% endfilter %}">
+                    {% for token in seg.tokens %}
+                    <span class="doc-token"
+                          seg_index = "{{ seg_loop.index0}}"
+                          token_index="{{ loop.index0 }}">
                                   {{ token.lex }}
                             </span>
-                        {% endfor %}
-                    </div>
-                    {% endif %}
+                    {% endfor %}
+                </div>
+                {% endif %}
 
-                    <!--latin sentence-->
-                    <div class="doc-segment-latin"
-                         rtl="{% filter lower %}{{ rtl }}{% endfilter %}">
-                        {% for token in seg.tokens %}
-                            <span class="doc-token"
-                                  seg_index = "{{ seg_loop.index0}}"
-                                  token_index="{{ loop.index0 }}">
+                <!--latin sentence-->
+                <div class="doc-segment-latin"
+                     rtl="{% filter lower %}{{ rtl }}{% endfilter %}">
+                    {% for token in seg.tokens %}
+                    <span class="doc-token"
+                          seg_index = "{{ seg_loop.index0}}"
+                          token_index="{{ loop.index0 }}">
                                   {{ token.unidecoded_text }}
                             </span>
-                        {% endfor %}
-                    </div>
+                    {% endfor %}
                 </div>
+            </div>
             {% endfor %}
         </div>
     </div>
@@ -565,9 +565,12 @@
                         .attr('type', type);
                 if (bio.toLowerCase() == 'b'){
                     tok.addClass('b');
-                    if ($('#doc-data').attr("rtl")){
+                    if ($('#doc-data').attr("rtl") == 'True'){
                         tok.css("margin-left", 0);
-                        tok.css("margin-right", 5)
+                        tok.css("margin-right", 5);
+                    } else {
+                        tok.css("margin-left", 5);
+                        tok.css("margin-right", 0);
                     }
                 }
             }
@@ -587,13 +590,13 @@
                 var bio = l[0];
                 var e_type = l[1];
 
-                // continu if token error type doesn't match given error type
+                // continue if token error type doesn't match given error type
                 if (e_type != error_type && error_type != 'all')
                     return;
 
                 tok.attr('error_type', e_type);
                 if (bio.toLowerCase() == 'b') {
-                    if ($('#doc-data').attr("rtl"))
+                    if ($('#doc-data').attr("rtl") == 'True')
                         tok.css("margin-left", 0)
                                 .css("margin-right", 5);
                     else
@@ -649,7 +652,7 @@
         for(i = 0; i < div_without_err.length; i++)
             $('#doc').append(div_without_err[i]);
     }
-    
+
     function sort_segments() {
         // this function sort segments by its segment id.
         var sorted_div = [];

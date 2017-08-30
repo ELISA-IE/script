@@ -7,7 +7,7 @@ import xml.dom.minidom
 import xml.etree.ElementTree as ET
 
 
-def bio2ltf(bio_str, doc_id, with_offset=None):
+def bio2ltf(bio_str, doc_id='', with_offset=False):
     if with_offset:
         ltf_root = bio2ltf_with_offset(bio_str)
     else:
@@ -21,7 +21,7 @@ def bio2ltf_no_offset(bio_str, doc_id):
     sents = []
     for sent in bio_sents:
         s = []
-        for line in sent.splitlines():
+        for line in sent.strip().splitlines():
             token = line.split(' ')[0]
             s.append(token)
         sents.append(s)
@@ -67,8 +67,6 @@ def bio2ltf_no_offset(bio_str, doc_id):
             seg_element.append(token_element)
 
         text_element.append(seg_element)
-
-    root = ET.ElementTree(root)
 
     return root
 
@@ -136,7 +134,7 @@ def bio2ltf_with_offset(bio_str):
 
             text_element.append(seg_element)
 
-        ltf_root[d_id] = ET.ElementTree(root)
+        ltf_root[d_id] = root
 
     return ltf_root
 
@@ -175,13 +173,11 @@ def parse_bio(bio_str):
 
 
 def write2file(root, ltf_output):
-    root.write(ltf_output)
-
     # pretty print xml
-    f_xml = xml.dom.minidom.parse(
-        ltf_output)  # or xml.dom.minidom.parseString(xml_string)
-    pretty_xml_as_string = f_xml.toprettyxml()
-    f = io.open(ltf_output, 'w', -1, 'utf-8')
+    root_str = ET.tostring(root, 'utf-8')
+    f_xml = xml.dom.minidom.parseString(root_str)
+    pretty_xml_as_string = f_xml.toprettyxml(encoding="utf-8")
+    f = open(ltf_output, 'wb')
     f.write(pretty_xml_as_string)
     f.close()
 
@@ -202,7 +198,7 @@ if __name__ == "__main__":
 
     doc_id = args.bio_input.split('/')[-1].replace('.bio', '')
 
-    root = bio2ltf(bio_str, doc_id, with_offset=args.with_offset)
+    root = bio2ltf(bio_str, doc_id=doc_id, with_offset=args.with_offset)
 
     if type(root) is dict:
         for d_id, r in root.items():

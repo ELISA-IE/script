@@ -10,24 +10,27 @@ def bio2rsd(bio_str):
 
     rsd = {}
     for d_id, sents in bio.items():
-        # sort sent by its start char
-        sorted_sents = sorted(sents, key=lambda x: x[0][1])
+        try:
+            # sort sent by its start char
+            sorted_sents = sorted(sents, key=lambda x: x[0][1])
 
-        rsd_str = ''
-        prev_token_end = -1
-        for s in sorted_sents:
-            for i, t in enumerate(s):
-                if i == 0:
-                    delimiter = '\n'
-                else:
-                    delimiter = ' '
-                rsd_str += delimiter * (t[1] - prev_token_end - 1) + t[0]
+            rsd_str = ''
+            prev_token_end = -1
+            for s in sorted_sents:
+                for i, t in enumerate(s):
+                    if i == 0:
+                        delimiter = '\n'
+                    else:
+                        delimiter = ' '
+                    rsd_str += delimiter * (t[1] - prev_token_end - 1) + t[0]
 
-                assert rsd_str[t[1]:t[2]+1] == t[0], 'token offset error.'
+                    assert rsd_str[t[1]:t[2]+1] == t[0], 'token offset error.'
 
-                prev_token_end = t[2]
+                    prev_token_end = t[2]
 
-        rsd[d_id] = rsd_str
+            rsd[d_id] = rsd_str
+        except AssertionError as e:
+            print('bio2rsd error', d_id, e)
 
     return rsd
 

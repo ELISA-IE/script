@@ -15,7 +15,7 @@ if __name__ == '__main__':
 
     outpath = sys.argv[1].split('/')[:-1]
     outpath.append('filelist.txt')
-    outpath = ''.join(outpath)
+    outpath = '/'.join(outpath)
     with open(outpath, 'w') as fw:
         for docid in sorted(docids):
             fw.write('%s\tTRUE\n' % (docid))

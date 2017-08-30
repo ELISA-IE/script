@@ -12,7 +12,13 @@ def laf2tab(laf_root):
         text = ann.find("EXTENT").text
         start_char = ann.find("EXTENT").get("start_char")
         end_char = ann.find("EXTENT").get("end_char")
-        tag = ann.find("TAG").text
+
+        # handle annotation format inconsistency
+        try:
+            tag = ann.find("TAG").text
+        except AttributeError:
+            tag = ann.get('type')
+
         if tag not in ['PER', 'GPE', 'LOC', 'ORG',
                        'per', 'gpe', 'loc', 'org']:
             continue

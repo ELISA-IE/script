@@ -1,22 +1,29 @@
 import argparse
 import codecs
+import sys
 
 
 def bio2tab(bio_str):
+    print('=> bio2tab...')
     bio_sents = bio_str.split('\n\n')
 
     tab_result = []
     current_doc_id = ''
     label_index = 0
     b_tag_count = 0
+    num_tokens = 0
+    num_sents = 0
+    doc_set = set()
     for sent in bio_sents:
         sent = sent.strip()
         if not sent:
             continue
+        num_sents += 1
         sent_mentions = []
         tokens = sent.splitlines()
         current_mention = []
         for i, t in enumerate(tokens):
+            num_tokens += 1
             t_split = t.split(' ')
             text = t_split[0]
             doc_id, offset = t_split[1].split(':')
@@ -81,8 +88,17 @@ def bio2tab(bio_str):
 
             label_index += 1
 
+        sys.stdout.write('%d docs, %d sentences, %d tokens processed.\r' %
+                         (len(doc_set), num_sents, num_tokens))
+        sys.stdout.flush()
+
+    print('%d docs, %d sentences, %d tokens processed in total.' %
+          (len(doc_set), num_sents, num_tokens))
+
     assert b_tag_count == len(tab_result), \
         'number of B tag in bio and tab entries does not match'
+
+    print('Validation passed: the number of B tag in bio matches tab entries.')
 
     tab_str = '\n'.join(tab_result)+'\n'
 

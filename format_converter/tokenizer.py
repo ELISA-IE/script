@@ -14,7 +14,7 @@ class Tokenizer(object):
                            'cmn': self.seg_cmn,
                            'edl_spanish': self.seg_edl_spanish,
                            'edl_cmn': self.seg_edl_cmn,
-                           'nltk+linkebreak': self.seg_nltk_linebreak,
+                           'nltk+linebreak': self.seg_nltk_linebreak,
                            'tigrinya': self.seg_tigrinya
                            }
         self.tokenizers = {'unitok': self.tok_unitok,

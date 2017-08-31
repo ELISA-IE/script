@@ -7,6 +7,9 @@ import xml.dom.minidom
 import xml.etree.ElementTree as ET
 import codecs
 
+# dirty import from current dir
+script_dirname = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(script_dirname)
 from tokenizer import Tokenizer
 
 

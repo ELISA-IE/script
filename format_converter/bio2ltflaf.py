@@ -4,7 +4,7 @@ import xml.dom.minidom
 import xml.etree.ElementTree as ET
 
 
-def bio2ltf(bio_str, doc_id):
+def bio2ltflaf(bio_str, doc_id, delimiter=' '):
     bio_sents = bio_str.split('\n\n')
     sents = []
     tags = []
@@ -19,7 +19,7 @@ def bio2ltf(bio_str, doc_id):
         sents.append(s)
         tags.append(t)
 
-    doc_text = '\n'.join([' '.join(sent) for sent in sents])
+    doc_text = '\n'.join([delimiter.join(sent) for sent in sents])
 
     # ltf xml root
     ltf_root = ET.Element('LCTL_TEXT')
@@ -146,6 +146,6 @@ if __name__ == "__main__":
 
     doc_id = args.bio_fp.split('/')[-1].replace('.bio', '')
 
-    ltf_root, laf_root = bio2ltf(bio_str, doc_id)
+    ltf_root, laf_root = bio2ltflaf(bio_str, doc_id)
 
     write2file(ltf_root, laf_root, args.ltf_fp, args.laf_fp)

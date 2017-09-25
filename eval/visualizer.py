@@ -14,7 +14,7 @@ from bio2tab import bio2tab
 import edl_eval
 
 
-def visualize(data, translation, pred_stats, ref_stats, scores, errors,
+def visualize(data, translation, lexicon, pred_stats, ref_stats, scores, errors,
               is_rtl, no_ref):
     print('=> visualizing...')
     html_result = dict()
@@ -33,7 +33,7 @@ def visualize(data, translation, pred_stats, ref_stats, scores, errors,
         data_to_render['segs'] = segs
         data_to_render['has_src'] = True
         data_to_render['has_ref'] = True
-        data_to_render['has_lex'] = True
+        data_to_render['has_lex'] = True if lexicon else False
         data_to_render['rtl'] = is_rtl
         data_to_render['no_ref'] = no_ref
 
@@ -325,6 +325,7 @@ if __name__ == "__main__":
     #
     html_result = visualize(data,
                             translation,
+                            lexicon,
                             overall_pred_stats,
                             overall_ref_stats,
                             overall_scores,

@@ -236,6 +236,10 @@
             content: 'gpe';
         }
 
+        span.doc-token.b[type]::before {
+            content: attr(type);
+        }
+
         span.doc-token[type='ORG'] {
             color: #2b7c00;
             background-color: rgba(122, 206, 48, .1);
@@ -562,7 +566,7 @@
                 var bio = l[0];
                 var type = l[1];
                 tok.attr('annotated', 'true')
-                        .attr('type', type);
+                        .attr('type', type.toLowerCase());
                 if (bio.toLowerCase() == 'b'){
                     tok.addClass('b');
                     if ($('#doc-data').attr("rtl") == 'True'){

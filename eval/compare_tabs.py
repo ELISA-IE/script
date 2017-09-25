@@ -118,8 +118,6 @@ if __name__ == '__main__':
         for i in sorted(m2type_a,
                         key=lambda x: count_mention(m2type_a[x]),
                         reverse=True):
-            if 'GPE' not in m2type_a[i] and 'LOC' not in m2type_a[i]:
-                continue
             fw.write('%s\t%s\t%s\t%s\t%s\t%s\n' % (i,
                                                  count_mention(m2type_a[i]),
                                                  dict(m2type_a[i]),

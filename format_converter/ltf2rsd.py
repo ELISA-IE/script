@@ -6,14 +6,14 @@ import xml.etree.ElementTree as ET
 import xml
 
 
-def ltf2rsd(ltf_str, tokenized):
+def ltf2rsd(ltf_str, dat=False):
     root = ET.fromstring(ltf_str)
     doc = root.find('DOC')
     doc_id = doc.get('id')
     rsd = ''
     prev_sent_end = -1
     for seg in doc.findall('.//SEG'):
-        if tokenized:
+        if dat:
             tokens = [tok.text for tok in seg.findall('.//TOKEN')]
             rsd += ' '.join(tokens) + '\n'
         else:
@@ -31,7 +31,7 @@ def ltf2rsd(ltf_str, tokenized):
     return rsd
 
 
-def ltf2rsd_batch(input_ltf, output_rsd, tokenized):
+def ltf2rsd_batch(input_ltf, output_rsd, dat):
     ltf_fns = os.listdir(input_ltf)
     for i, fn in enumerate(ltf_fns):
         try:
@@ -41,9 +41,9 @@ def ltf2rsd_batch(input_ltf, output_rsd, tokenized):
 
             ltf_str = codecs.open(ltf_file, 'r', 'utf-8').read()
 
-            rsd_str = ltf2rsd(ltf_str, tokenized)
+            rsd_str = ltf2rsd(ltf_str, dat)
 
-            if tokenized:
+            if dat:
                 rsd_file = os.path.join(output_rsd, fn.replace('.ltf.xml',
                                                                '.rsd_tok.txt'))
             else:
@@ -79,17 +79,19 @@ if __name__ == "__main__":
                         help='input ltf file path or directory.')
     parser.add_argument('rsd_output', type=str,
                         help='output rsd file path or directory.')
-    parser.add_argument('--tokenized', action='store_true', default=False)
+    parser.add_argument('--dat', action='store_true', default=False,
+                        help='use white space as delimiter for each token. one '
+                             'sentence per line. used for embedding training')
 
     args = parser.parse_args()
 
     input_ltf = args.ltf_input
     output_rsd = args.rsd_output
-    tokenized = args.tokenized
+    dat = args.dat
 
     if args.is_dir:
-        ltf2rsd_batch(input_ltf, output_rsd, tokenized)
+        ltf2rsd_batch(input_ltf, output_rsd, dat)
     else:
         ltf_str = codecs.open(input_ltf, 'r', 'utf-8').read()
-        rsd_str = ltf2rsd(ltf_str, tokenized)
+        rsd_str = ltf2rsd(ltf_str, dat)
         write2file(rsd_str, output_rsd)

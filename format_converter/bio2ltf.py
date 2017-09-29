@@ -7,16 +7,16 @@ import xml.dom.minidom
 import xml.etree.ElementTree as ET
 
 
-def bio2ltf(bio_str, doc_id='', with_offset=False):
+def bio2ltf(bio_str, doc_id='', with_offset=False, delimiter=' '):
     if with_offset:
         ltf_root = bio2ltf_with_offset(bio_str)
     else:
-        ltf_root = bio2ltf_no_offset(bio_str, doc_id)
+        ltf_root = bio2ltf_no_offset(bio_str, doc_id, delimiter)
 
     return ltf_root
 
 
-def bio2ltf_no_offset(bio_str, doc_id):
+def bio2ltf_no_offset(bio_str, doc_id, delimiter):
     bio_sents = bio_str.split('\n\n')
     sents = []
     for sent in bio_sents:
@@ -26,7 +26,7 @@ def bio2ltf_no_offset(bio_str, doc_id):
             s.append(token)
         sents.append(s)
 
-    doc_text = '\n'.join([' '.join(sent) for sent in sents])
+    doc_text = '\n'.join([delimiter.join(sent) for sent in sents])
 
     root = ET.Element('LCTL_TEXT')
     doc_element = ET.Element('DOC', {'id': doc_id})
@@ -36,7 +36,7 @@ def bio2ltf_no_offset(bio_str, doc_id):
 
     prev_seg_end = -2
     for i in range(len(sents)):
-        seg_text = ' '.join(sents[i])
+        seg_text = delimiter.join(sents[i])
         seg_start_char = prev_seg_end + 2  # '\n' between segs
         seg_end_char = seg_start_char + len(seg_text) - 1
         prev_seg_end = seg_end_char
@@ -50,11 +50,11 @@ def bio2ltf_no_offset(bio_str, doc_id):
         original_text_element.text = seg_text
         seg_element.append(original_text_element)
 
-        pre_tok_end = seg_start_char - 2
+        pre_tok_end = seg_start_char - len(delimiter) - 1
         for j in range(len(sents[i])):
             token_id = '%s-%s' % (seg_id, str(j))
             tok_text = sents[i][j]
-            tok_start_char = pre_tok_end + 2
+            tok_start_char = pre_tok_end + len(delimiter) + 1
             tok_end_char = tok_start_char + len(tok_text) - 1
             pre_tok_end = tok_end_char
 
@@ -190,7 +190,10 @@ if __name__ == "__main__":
                         help='output ltf path.')
     parser.add_argument('-w', '--with_offset', action='store_true',
                         default=False,
-                        help='bio with offset in the ')
+                        help='bio with offset')
+    parser.add_argument('--delimiter',
+                        help='delimiter used to join words when offset '
+                             'is not provided.')
 
     args = parser.parse_args()
 
@@ -198,7 +201,8 @@ if __name__ == "__main__":
 
     doc_id = args.bio_input.split('/')[-1].replace('.bio', '')
 
-    root = bio2ltf(bio_str, doc_id=doc_id, with_offset=args.with_offset)
+    root = bio2ltf(bio_str, doc_id=doc_id, with_offset=args.with_offset,
+                   delimiter=args.delimiter)
 
     if type(root) is dict:
         for d_id, r in root.items():

@@ -191,7 +191,7 @@ if __name__ == "__main__":
     parser.add_argument('-w', '--with_offset', action='store_true',
                         default=False,
                         help='bio with offset')
-    parser.add_argument('--delimiter',
+    parser.add_argument('--delimiter', type=str,
                         help='delimiter used to join words when offset '
                              'is not provided.')
 
@@ -201,8 +201,15 @@ if __name__ == "__main__":
 
     doc_id = args.bio_input.split('/')[-1].replace('.bio', '')
 
+    if not args.delimiter:
+        delimiter = ' '
+    elif args.delimiter == 'no_space':
+        delimiter = ''
+    else:
+        delimiter = args.delimiter
+
     root = bio2ltf(bio_str, doc_id=doc_id, with_offset=args.with_offset,
-                   delimiter=args.delimiter)
+                   delimiter=delimiter)
 
     if type(root) is dict:
         for d_id, r in root.items():

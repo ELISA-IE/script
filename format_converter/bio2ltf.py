@@ -20,6 +20,9 @@ def bio2ltf_no_offset(bio_str, doc_id, delimiter):
     bio_sents = bio_str.split('\n\n')
     sents = []
     for sent in bio_sents:
+        sent = sent.strip()
+        if not sent:
+            continue
         s = []
         for line in sent.strip().splitlines():
             token = line.split(' ')[0]
@@ -193,7 +196,7 @@ if __name__ == "__main__":
                         help='bio with offset')
     parser.add_argument('--delimiter', type=str,
                         help='delimiter used to join words when offset '
-                             'is not provided.')
+                             'is not provided. (no_space if no delimiter)')
 
     args = parser.parse_args()
 

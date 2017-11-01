@@ -1,4 +1,5 @@
 import codecs
+import os
 import argparse
 import operator
 import sys
@@ -82,81 +83,82 @@ def bio2laf_no_offset(bio_str, doc_id, delimiter=' '):
 
 
 def bio2laf_with_offset(bio_str):
-    doc_id = bio_str.strip().splitlines()[0].split()[1].split(':')[0]
-    bios = parse_bio(bio_str)[doc_id]
+    parsed_bios = parse_bio(bio_str)
+    rtn_laf = {}
+    for doc_id, bios in parsed_bios.items():
+        # generate doc text
+        doc_text = ''
+        prev_word_end = -1
+        for s in bios:
+            doc_text += '\n' * (s[0][1] - prev_word_end - 1)
+            for i, w in enumerate(s):
+                if i == 0:
+                    doc_text += w[0]
+                else:
+                    doc_text += ' ' * (w[1] - prev_word_end - 1) + w[0]
 
-    # generate doc text
-    doc_text = ''
-    prev_word_end = -1
-    for s in bios:
-        doc_text += '\n' * (s[0][1] - prev_word_end - 1)
-        for i, w in enumerate(s):
-            if i == 0:
-                doc_text += w[0]
-            else:
-                doc_text += ' ' * (w[1] - prev_word_end - 1) + w[0]
+                assert doc_text[w[1]:w[2]+1] == w[0]
 
-            assert doc_text[w[1]:w[2]+1] == w[0]
+                prev_word_end = w[2]
 
-            prev_word_end = w[2]
+        # laf xml root
+        laf_root = ET.Element('LCTL_ANNOTATIONS')
+        laf_doc_element = ET.Element('DOC', {'id': doc_id})
+        laf_root.append(laf_doc_element)
 
-    # laf xml root
-    laf_root = ET.Element('LCTL_ANNOTATIONS')
-    laf_doc_element = ET.Element('DOC', {'id': doc_id})
-    laf_root.append(laf_doc_element)
+        for i in range(len(bios)):
+            # ======= generate laf file
+            # get annotations
+            annotations = []
+            tmp_ann_start = -1
+            for j in range(len(bios[i])):
+                if bios[i][j][3].startswith('B'):
+                    if tmp_ann_start != -1:
+                        tmp_ann_end = j - 1
+                        e_type = bios[i][tmp_ann_end][3].split('-')[1]
+                        annotations.append((tmp_ann_start, tmp_ann_end, e_type))
+                    tmp_ann_start = j
+                elif bios[i][j][3].startswith('O'):
+                    if tmp_ann_start != -1:
+                        tmp_ann_end = j - 1
+                        e_type = bios[i][tmp_ann_end][3].split('-')[1]
+                        annotations.append((tmp_ann_start, tmp_ann_end, e_type))
+                    tmp_ann_start = -1
+                elif j == len(bios[i]) - 1:
+                    if tmp_ann_start != -1:
+                        tmp_ann_end = j
+                        e_type = bios[i][tmp_ann_end][3].split('-')[1]
+                        annotations.append((tmp_ann_start, tmp_ann_end, e_type))
+            # map offsets to annotation
+            for j, ann in enumerate(annotations):
+                start_index = int(ann[0])
+                end_index = int(ann[1])
+                e_type = ann[2]
 
-    for i in range(len(bios)):
-        # ======= generate laf file
-        # get annotations
-        annotations = []
-        tmp_ann_start = -1
-        for j in range(len(bios[i])):
-            if bios[i][j][3].startswith('B'):
-                if tmp_ann_start != -1:
-                    tmp_ann_end = j - 1
-                    e_type = bios[i][tmp_ann_end][3].split('-')[1]
-                    annotations.append((tmp_ann_start, tmp_ann_end, e_type))
-                tmp_ann_start = j
-            elif bios[i][j][3].startswith('O'):
-                if tmp_ann_start != -1:
-                    tmp_ann_end = j - 1
-                    e_type = bios[i][tmp_ann_end][3].split('-')[1]
-                    annotations.append((tmp_ann_start, tmp_ann_end, e_type))
-                tmp_ann_start = -1
-            elif j == len(bios[i]) - 1:
-                if tmp_ann_start != -1:
-                    tmp_ann_end = j
-                    e_type = bios[i][tmp_ann_end][3].split('-')[1]
-                    annotations.append((tmp_ann_start, tmp_ann_end, e_type))
-        # map offsets to annotation
-        for j, ann in enumerate(annotations):
-            start_index = int(ann[0])
-            end_index = int(ann[1])
-            e_type = ann[2]
+                annotation_text = ''
+                prev_word_end = bios[i][start_index][1] - 1
+                for word in bios[i][start_index:end_index+1]:
+                    annotation_text += ' ' * (word[1] - prev_word_end - 1) + word[0]
+                    prev_word_end = word[2]
 
-            annotation_text = ''
-            prev_word_end = bios[i][start_index][1] - 1
-            for word in bios[i][start_index:end_index+1]:
-                annotation_text += ' ' * (word[1] - prev_word_end - 1) + word[0]
-                prev_word_end = word[2]
+                start_offset = bios[i][start_index][1]
+                end_offset = bios[i][end_index][2]
 
-            start_offset = bios[i][start_index][1]
-            end_offset = bios[i][end_index][2]
+                assert doc_text[start_offset:end_offset + 1] == annotation_text
 
-            assert doc_text[start_offset:end_offset + 1] == annotation_text
+                ann_id = '%s-ann-%d' % (doc_id, j)
+                annotation_element = ET.Element('ANNOTATION', {'id': ann_id,
+                                                               'task': 'NE',
+                                                               'type': e_type})
+                extent_element = ET.Element('EXTENT',
+                                            {'start_char': str(start_offset),
+                                             'end_char': str(end_offset)})
+                extent_element.text = annotation_text
+                annotation_element.append(extent_element)
+                laf_doc_element.append(annotation_element)
+        rtn_laf[doc_id] = laf_root
 
-            ann_id = '%s-ann-%d' % (doc_id, j)
-            annotation_element = ET.Element('ANNOTATION', {'id': ann_id,
-                                                           'task': 'NE',
-                                                           'type': e_type})
-            extent_element = ET.Element('EXTENT',
-                                        {'start_char': str(start_offset),
-                                         'end_char': str(end_offset)})
-            extent_element.text = annotation_text
-            annotation_element.append(extent_element)
-            laf_doc_element.append(annotation_element)
-
-    return laf_root
+    return rtn_laf
 
 
 def parse_bio(bio_str):
@@ -210,15 +212,33 @@ if __name__ == "__main__":
     parser.add_argument('--delimiter', type=str, default=' ',
                         help='delimiter used to join words when offset '
                              'is not provided.')
+    parser.add_argument('-d', '--dir', action='store_true', default=False,
+                        help='input and output are directories')
 
     args = parser.parse_args()
 
-    bio_str = codecs.open(args.bio_fp, 'r', 'utf-8').read()
-
-    if args.with_offset:
-        laf_root = bio2laf_with_offset(bio_str)
+    bio_files = []
+    if args.dir:
+        for f in os.listdir(args.bio_fp):
+            if not f.endswith('.bio'):
+                continue
+            f_path = os.path.join(args.bio_fp, f)
+            bio_files.append(f_path)
     else:
-        doc_id = args.bio_fp.split('/')[-1].replace('.bio', '')
-        laf_root = bio2laf_no_offset(bio_str, doc_id, args.delimiter)
+        bio_files.append(args.bio_fp)
 
-    write2file(laf_root, args.laf_fp)
+    for f in bio_files:
+        bio_str = codecs.open(f, 'r', 'utf-8').read()
+
+        if args.with_offset:
+            laf_root = bio2laf_with_offset(bio_str)
+        else:
+            doc_id = f.split('/')[-1].replace('.bio', '')
+            laf_root = bio2laf_no_offset(bio_str, doc_id, args.delimiter)
+
+        if type(laf_root) is dict:
+            for d_id, r in laf_root.items():
+                laf_file = os.path.join(args.laf_fp, doc_id + '.laf.xml')
+                write2file(r, laf_file)
+        else:
+            write2file(laf_root, os.path.join(args.laf_fp, doc_id + '.laf.xml'))

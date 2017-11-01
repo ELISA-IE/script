@@ -41,6 +41,9 @@ class Tokenizer(object):
 
         # run segmenter
         sents = self.segmenters[self.seg_option](plain_text)
+
+        sents = [s for s in sents if s.strip()]
+
         return sents
 
     def run_tokenizer(self, sents):
@@ -50,6 +53,10 @@ class Tokenizer(object):
 
         # run tokenizer
         tokenized_sents = self.tokenizers[self.tok_option](sents)
+
+        for i, s in enumerate(tokenized_sents):
+            s = [t for t in s if t.strip()]
+            tokenized_sents[i] = s
 
         return tokenized_sents
 

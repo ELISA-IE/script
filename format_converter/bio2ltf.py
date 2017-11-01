@@ -197,12 +197,10 @@ if __name__ == "__main__":
     parser.add_argument('--delimiter', type=str,
                         help='delimiter used to join words when offset '
                              'is not provided. (no_space if no delimiter)')
+    parser.add_argument('-d', '--dir', action='store_true', default=False,
+                        help='input and output are directories')
 
     args = parser.parse_args()
-
-    bio_str = io.open(args.bio_input, 'r', -1, 'utf-8').read()
-
-    doc_id = args.bio_input.split('/')[-1].replace('.bio', '')
 
     if not args.delimiter:
         delimiter = ' '
@@ -211,12 +209,24 @@ if __name__ == "__main__":
     else:
         delimiter = args.delimiter
 
-    root = bio2ltf(bio_str, doc_id=doc_id, with_offset=args.with_offset,
-                   delimiter=delimiter)
-
-    if type(root) is dict:
-        for d_id, r in root.items():
-            ltf_file = os.path.join(args.ltf_output, d_id+'.ltf.xml')
-            write2file(r, ltf_file)
+    bio_files = []
+    if args.dir:
+        for f in os.listdir(args.bio_input):
+            if not f.endswith('.bio'):
+                continue
+            f_path = os.path.join(args.bio_input, f)
+            bio_files.append(f_path)
     else:
-        write2file(root, args.ltf_output)
+        bio_files.append(args.bio_input)
+
+    for f in bio_files:
+        bio_str = open(f).read()
+        doc_id = f.split('/')[-1].replace('.bio', '')
+        root = bio2ltf(bio_str, doc_id=doc_id, with_offset=args.with_offset,
+                       delimiter=delimiter)
+        if type(root) is dict:
+            for d_id, r in root.items():
+                ltf_file = os.path.join(args.ltf_output, doc_id + '.ltf.xml')
+                write2file(r, ltf_file)
+        else:
+            write2file(root, os.path.join(args.ltf_output, doc_id + '.ltf.xml'))

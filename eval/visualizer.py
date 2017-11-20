@@ -11,11 +11,12 @@ from jinja2 import Environment, FileSystemLoader
 script_dirname = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.join(script_dirname, os.pardir, 'format_converter'))
 from bio2tab import bio2tab
+from bio2bio_offset import bio2bio_offset
 import edl_eval
 
 
 def visualize(data, translation, lexicon, pred_stats, ref_stats, scores, errors,
-              is_rtl, no_ref):
+              is_rtl, no_ref, latin):
     print('=> visualizing...')
     html_result = dict()
     script_dirname = os.path.dirname(os.path.abspath(__file__))
@@ -36,6 +37,7 @@ def visualize(data, translation, lexicon, pred_stats, ref_stats, scores, errors,
         data_to_render['has_lex'] = True if lexicon else False
         data_to_render['rtl'] = is_rtl
         data_to_render['no_ref'] = no_ref
+        data_to_render['latin'] = latin
 
         # add translation
         trans = []
@@ -254,10 +256,21 @@ if __name__ == "__main__":
                         help="right to left alignment.")
     parser.add_argument('--rank', action='store_true', default=False,
                         help='rank document by f1 score.')
+    parser.add_argument('--latin', action='store_true', default=False,
+                        help='show latin script')
+    parser.add_argument('--no_offset', action='store_true', default=False,
+                        help='tokenize file with space, 20 sentences per '
+                             'document')
+
     args = parser.parse_args()
 
     print("=> loading bio data...")
     bio_str = codecs.open(args.bio, 'r', 'utf-8').read()
+
+    # generate offsets if no offset provided
+    d_id = os.path.basename(args.bio).replace('.bio', '')
+    bio_offset = bio2bio_offset(bio_str, d_id, split=20)
+    bio_str = '\n\n'.join(list(bio_offset.values()))
 
     #
     # load lexicon
@@ -331,6 +344,7 @@ if __name__ == "__main__":
                             overall_scores,
                             overall_errors,
                             args.rtl,
-                            args.no_ref)
+                            args.no_ref,
+                            args.latin)
 
     write2file(html_result, args.output_dir, args.rank)

@@ -460,6 +460,7 @@
                 {% endif %}
 
                 <!--latin sentence-->
+                {% if latin %}
                 <div class="doc-segment-latin"
                      rtl="{% filter lower %}{{ rtl }}{% endfilter %}">
                     {% for token in seg.tokens %}
@@ -470,6 +471,7 @@
                             </span>
                     {% endfor %}
                 </div>
+                {% endif %}
             </div>
             {% endfor %}
         </div>

@@ -20,6 +20,9 @@ def bio2ltf_no_offset(bio_str, doc_id, delimiter):
     bio_sents = bio_str.split('\n\n')
     sents = []
     for sent in bio_sents:
+        sent = sent.strip()
+        if not sent:
+            continue
         s = []
         for line in sent.strip().splitlines():
             token = line.split(' ')[0]
@@ -191,22 +194,39 @@ if __name__ == "__main__":
     parser.add_argument('-w', '--with_offset', action='store_true',
                         default=False,
                         help='bio with offset')
-    parser.add_argument('--delimiter',
+    parser.add_argument('--delimiter', type=str,
                         help='delimiter used to join words when offset '
-                             'is not provided.')
+                             'is not provided. (no_space if no delimiter)')
+    parser.add_argument('-d', '--dir', action='store_true', default=False,
+                        help='input and output are directories')
 
     args = parser.parse_args()
 
-    bio_str = io.open(args.bio_input, 'r', -1, 'utf-8').read()
-
-    doc_id = args.bio_input.split('/')[-1].replace('.bio', '')
-
-    root = bio2ltf(bio_str, doc_id=doc_id, with_offset=args.with_offset,
-                   delimiter=args.delimiter)
-
-    if type(root) is dict:
-        for d_id, r in root.items():
-            ltf_file = os.path.join(args.ltf_output, d_id+'.ltf.xml')
-            write2file(r, ltf_file)
+    if not args.delimiter:
+        delimiter = ' '
+    elif args.delimiter == 'no_space':
+        delimiter = ''
     else:
-        write2file(root, args.ltf_output)
+        delimiter = args.delimiter
+
+    bio_files = []
+    if args.dir:
+        for f in os.listdir(args.bio_input):
+            if not f.endswith('.bio'):
+                continue
+            f_path = os.path.join(args.bio_input, f)
+            bio_files.append(f_path)
+    else:
+        bio_files.append(args.bio_input)
+
+    for f in bio_files:
+        bio_str = open(f).read()
+        doc_id = f.split('/')[-1].replace('.bio', '')
+        root = bio2ltf(bio_str, doc_id=doc_id, with_offset=args.with_offset,
+                       delimiter=delimiter)
+        if type(root) is dict:
+            for d_id, r in root.items():
+                ltf_file = os.path.join(args.ltf_output, doc_id + '.ltf.xml')
+                write2file(r, ltf_file)
+        else:
+            write2file(root, os.path.join(args.ltf_output, doc_id + '.ltf.xml'))

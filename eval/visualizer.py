@@ -292,9 +292,10 @@ if __name__ == "__main__":
         bio_str = to_bio(bio_str, args.no_ref)
 
     # generate offsets if no offset provided
-    d_id = os.path.basename(args.bio).replace('.bio', '')
-    bio_offset = bio2bio_offset(bio_str, d_id, split=20)
-    bio_str = '\n\n'.join(list(bio_offset.values()))
+    if args.no_offset:
+        d_id = os.path.basename(args.bio).replace('.bio', '')
+        bio_offset = bio2bio_offset(bio_str, d_id, split=20)
+        bio_str = '\n\n'.join(list(bio_offset.values()))
 
     #
     # load lexicon

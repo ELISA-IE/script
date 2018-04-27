@@ -23,7 +23,8 @@ def visualize(data, translation, lexicon, pred_stats, ref_stats, scores, errors,
 
     # sort overall score by f1
     sorted_scores = sorted(scores.items(),
-                           key=lambda x: x[1]['overall'][2])
+                           key=lambda x: x[1]['num_errors'],
+                           reverse=True)
 
     for i in range(len(data))[:]:
         doc_id = sorted_scores[i][0]
@@ -53,6 +54,7 @@ def visualize(data, translation, lexicon, pred_stats, ref_stats, scores, errors,
         p = pred_stats[doc_id]
         r = ref_stats[doc_id]
         s = scores[doc_id]
+        s.pop('num_errors')
         e = errors[doc_id]
         data_to_render['pred_stats'] = p
         data_to_render['ref_stats'] = r

@@ -289,7 +289,7 @@ def stats(bio_str, tab_str):
 # print results
 #
 def print_stats(stats):
-    print('=> %s stats' % stats['sys_name'])
+    print('-> %s stats' % stats['sys_name'])
     if stats['num_docs'] and stats['num_sents'] and stats['num_tokens']:
         print('  %d documents; %d sentences; %d tokens.' %
               (stats['num_docs'], stats['num_sents'], stats['num_tokens']))
@@ -300,14 +300,14 @@ def print_stats(stats):
 
 
 def print_errors(errors):
-    print('=> error analysis')
+    print('-> error analysis')
     # overall errors
     for error_type, e in errors.items():
         print(' %s: %d' % (error_type, len(e)))
 
 
 def print_scores(scores):
-    print('=> performance')
+    print('-> performance')
     print("  {:<14}{:<14}{:<14}{:<14}".format(
         'entity_type', 'precision', 'recall', 'f1'
     ))

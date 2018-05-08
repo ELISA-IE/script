@@ -1,6 +1,7 @@
 import argparse
 import codecs
 import sys
+import os
 
 
 def bio2tab(bio_str):
@@ -113,18 +114,34 @@ def write2file(tab_str, tab_file):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('bio_file', type=str,
-                        help='input bio file path')
-    parser.add_argument('tab_file', type=str,
-                        help='output tab file path')
-
+    parser.add_argument('bio_input', type=str,
+                        help='input bio path')
+    parser.add_argument('tab_output', type=str,
+                        help='output tab path')
+    parser.add_argument('-d', '--dir', action='store_true', default=False,
+                        help='input and output are directories')
     args = parser.parse_args()
 
-    bio_str = codecs.open(args.bio_file, 'r', 'utf-8').read()
+    bio_files = []
+    if args.dir:
+        for f in os.listdir(args.bio_input):
+            if not f.endswith('.bio'):
+                continue
+            f_path = os.path.join(args.bio_input, f)
+            bio_files.append(f_path)
+    else:
+        bio_files.append(args.bio_input)
 
-    tab_str = bio2tab(bio_str)
+    for f in bio_files:
+        doc_id = f.split('/')[-1].replace('.bio', '')
+        bio_str = codecs.open(f, 'r', 'utf-8').read()
 
-    write2file(tab_str, args.tab_file)
+        tab_str = bio2tab(bio_str)
+
+        if args.dir:
+            write2file(tab_str, os.path.join(args.tab_output, doc_id+'.tab'))
+        else:
+            write2file(tab_str, doc_id+'.tab')
 
 
 

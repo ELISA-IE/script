@@ -229,4 +229,4 @@ if __name__ == "__main__":
                 ltf_file = os.path.join(args.ltf_output, doc_id + '.ltf.xml')
                 write2file(r, ltf_file)
         else:
-            write2file(root, os.path.join(args.ltf_output, doc_id + '.ltf.xml'))
+            write2file(root, doc_id + '.ltf.xml')

@@ -317,6 +317,8 @@ def print_scores(scores):
         'entity_type', 'precision', 'recall', 'f1'
     ))
     for etype, s in scores.items():
+        if etype == 'num_errors':
+            continue
         print("  {:<14}{:<14.4f}{:<14.4f}{:<14.4f}".format(
             etype, s[0], s[1], s[2]
         ))

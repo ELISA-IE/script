@@ -61,6 +61,7 @@ def evaluate(input_tab_str, ref_tab_str):
     # compute overall p, r, f scores
     if not input_counts or not sum(correct_input_counts.values()):
         scores['overall'] = [0, 0, 0]
+        scores['num_errors'] = 0
     else:
         p_overall = \
             float(sum(correct_input_counts.values())) / sum(input_counts.values())
@@ -68,6 +69,10 @@ def evaluate(input_tab_str, ref_tab_str):
             float(sum(correct_input_counts.values())) / sum(ref_counts.values())
         f_overall = 2 * p_overall * r_overall / (p_overall + r_overall)
         scores['overall'] = [p_overall, r_overall, f_overall]
+        scores['num_errors'] = int(
+            sum(list(input_counts.values())) * (1 - scores['overall'][0]) +
+            sum(list(ref_counts.values())) * (1 - scores['overall'][1])
+        )
 
     return scores
 

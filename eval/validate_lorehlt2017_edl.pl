@@ -148,7 +148,7 @@ while (my $line = <SYSIN>) {
     if ($mention_type =~ /^\s*$/) {
 	$missing_mention_type++;
 	print "Line $ln: missing mention type found\n";
-    } elsif ($mention_type ne "NAM") {
+    } elsif ($mention_type ne "NAM" && $mention_type ne "NOM" ) {
 	$unsupported_mention_type++;
 	print "Line $ln: $mention_type is a unsupported mention type\n";
     }

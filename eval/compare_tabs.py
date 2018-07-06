@@ -119,11 +119,11 @@ if __name__ == '__main__':
                         key=lambda x: count_mention(m2type_a[x]),
                         reverse=True):
             fw.write('%s\t%s\t%s\t%s\t%s\t%s\n' % (i,
-                                                 count_mention(m2type_a[i]),
-                                                 dict(m2type_a[i]),
-                                                 count_mention(m2kbid_a[i]),
-                                                 dict(m2kbid_a[i]),
-                                                 m2trans_a[i]))
+                                                   dict(m2type_a[i]),
+                                                   dict(m2kbid_a[i]),
+                                                   m2trans_a[i],
+                                                   count_mention(m2kbid_a[i]),
+                                                   count_mention(m2type_a[i])))
 
     with open('%s/a_kbid' % args.outdir, 'w') as fw:
         for i in sorted(kbid2m_a,
@@ -141,11 +141,11 @@ if __name__ == '__main__':
                         key=lambda x: count_mention(m2type_b[x]),
                         reverse=True):
             fw.write('%s\t%s\t%s\t%s\t%s\t%s\n' % (i,
-                                                   count_mention(m2type_b[i]),
                                                    dict(m2type_b[i]),
-                                                   count_mention(m2kbid_b[i]),
                                                    dict(m2kbid_b[i]),
-                                                   m2trans_b[i]))
+                                                   m2trans_b[i],
+                                                   count_mention(m2type_b[i]),
+                                                   count_mention(m2kbid_b[i])))
 
     for i in m2type_a:
         if i not in m2type_b:

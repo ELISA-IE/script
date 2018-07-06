@@ -2,12 +2,6 @@ import tweepy
 import sys
 import argparse
 from collections import defaultdict
-import logging
-
-
-logger = logging.getLogger()
-logging.basicConfig(format='%(asctime)s: %(levelname)s: %(message)s')
-logging.root.setLevel(level=logging.INFO)
 
 
 if __name__ == '__main__':
@@ -35,7 +29,7 @@ if __name__ == '__main__':
             if tok.startswith('@'):
                 usernames[tok] += 1
 
-    logger.info('# of usernames: %s' % len(usernames))
+    print('# of usernames: %s' % len(usernames))
     n = 0
     with open(args.outpath, 'w') as fw:
         for i, c in sorted(usernames.items(), key=lambda x: x[1], reverse=True):
@@ -43,9 +37,9 @@ if __name__ == '__main__':
             try:
                 user = api.get_user(username.strip('…|,|:'))
             except Exception as e:
-                logger.error(username, e)
+                print(username, e)
                 continue
             n += 1
             fw.write('@%s\t%s\n' % (username, user.name))
 
-    logger.info('found %s pairs' % n)
+    print('found %s pairs' % n)

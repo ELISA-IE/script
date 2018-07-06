@@ -7,16 +7,22 @@ import os
 import gzip
 
 
-def elisa2parallel(xml_str):
+def elisa2parallel(xml_str, toked=False):
     src_sents = []
     trg_sents = []
 
     root = ET.fromstring(xml_str)
     for src in root.findall(".//SOURCE"):
-        src_text = src.find("ORIG_RAW_SOURCE").text
+        if toked:
+            src_text = src.find("LRLP_TOKENIZED_RAW_SOURCE").text
+        else:
+            src_text = src.find("ORIG_RAW_SOURCE").text
         src_sents.append(src_text)
     for trg in root.findall(".//TARGET"):
-        trg_text = trg.find("ORIG_RAW_TARGET").text
+        if toked:
+            trg_text = trg.find("LRLP_TOKENIZED_RAW_TARGET").text
+        else:
+            trg_text = trg.find("ORIG_RAW_TARGET").text
         trg_sents.append(trg_text)
 
     assert len(src_sents) == len(trg_sents), \
@@ -38,10 +44,12 @@ if __name__ == "__main__":
 
     parser.add_argument("input")
     parser.add_argument("output_dir")
+    parser.add_argument('--toked', action='store_true', default=False)
 
     args = parser.parse_args()
 
     elisa_file = args.input
+    toked = args.toked
 
     print("parsing elisa file..."),
     if elisa_file.endswith('.gz'):
@@ -51,7 +59,7 @@ if __name__ == "__main__":
         xml_str = codecs.open(args.input, 'r', 'utf-8').read()
     print("done")
 
-    src_sents, trg_sents = elisa2parallel(xml_str)
+    src_sents, trg_sents = elisa2parallel(xml_str, toked=toked)
 
     input_basename = os.path.basename(args.input)
 

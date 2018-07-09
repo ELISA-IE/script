@@ -33,11 +33,21 @@ def count(tab):
     return n
 
 
+def count_mention(mention):
+    n = 0
+    for t in mention:
+        if type(mention[t]) is int:
+            n += mention[t]
+        else:
+            n += sum([mention[t][i] for i in mention[t]])
+    return n
+
+
 def read_tab_m2(ptab):
     m2type = defaultdict(lambda: defaultdict(int))
     m2kbid = defaultdict(lambda: defaultdict(int))
     m2trans = {}
-    kbid2m = defaultdict(lambda: defaultdict(int))
+    kbid2m = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
     with open(ptab, 'r') as f:
         for line in f:
             tmp = line.rstrip('\n').split('\t')
@@ -55,15 +65,8 @@ def read_tab_m2(ptab):
             m2type[mention][etype] += 1
             m2kbid[mention][kbid] += 1
             m2trans[mention] = trans
-            kbid2m[kbid][mention] += 1
+            kbid2m[kbid][mention][etype] += 1
     return m2type, m2kbid, m2trans, kbid2m
-
-
-def count_mention(mention):
-    n = 0
-    for t in mention:
-        n += mention[t]
-    return n
 
 
 if __name__ == '__main__':
@@ -78,10 +81,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     logger.info('COMPARING TABS...')
-    try:
-        os.mkdir(args.outdir)
-    except FileExistsError:
-        pass
+    os.makedirs(args.outdir, exist_ok=True)
 
     tab_a = read_tab(args.pa)
     tab_b = read_tab(args.pb)
@@ -131,7 +131,7 @@ if __name__ == '__main__':
                         reverse=True):
             fw.write('%s\t%s\n' % (i, count_mention(kbid2m_a[i])))
             for j, c in sorted(kbid2m_a[i].items(),
-                               key=lambda x: x[1], reverse=True):
+                               key=lambda x: count_mention(x[1]), reverse=True):
                 fw.write('\t%s\t%s\t%s\n' % (j,
                                              dict(m2type_a[j]),
                                              m2trans_a[j]))

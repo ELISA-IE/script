@@ -133,7 +133,7 @@ if __name__ == '__main__':
             for j, c in sorted(kbid2m_a[i].items(),
                                key=lambda x: count_mention(x[1]), reverse=True):
                 fw.write('\t%s\t%s\t%s\n' % (j,
-                                             dict(m2type_a[j]),
+                                             dict(c),
                                              m2trans_a[j]))
 
     with open('%s/b' % args.outdir, 'w') as fw:
